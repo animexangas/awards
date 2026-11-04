@@ -257,9 +257,22 @@ function doPost(e) {
   } catch (err) {
     return json({ok: false, error: 'Invalid request'});
   }
-  if (!body || body.action !== 'vote') return json({ok: false, error: 'Invalid request'});
+  // The ballot asks this before voting starts, so a voter learns their name is taken before filling anything in.
+  if (body && body.action === 'checkName') {
+    const voter = cleanVoter(body.voter);
+    if (!voter) return json({ok: false, error: 'Please enter your name'});
+    try {
+      return json({ok: true, taken: nameTaken(voter)});
+    } catch (err) {
+      console.error(err);
+      return json({ok: false, error: 'Something went wrong — please try again'});
+    }
+  }
+  // 'vote' was the old one-category-at-a-time ballot; a page still open from before is asked to reload.
+  if (body && body.action === 'vote') return json({ok: false, error: 'This ballot page is out of date. Please reload it.'});
+  if (!body || body.action !== 'ballot') return json({ok: false, error: 'Invalid request'});
   try {
-    return json(withLock(() => recordVote(body)));
+    return json(withLock(() => recordBallot(body)));
   } catch (err) {
     console.error(err);
     return json({ok: false, error: err.message === 'Busy — please try again' ? err.message : 'Something went wrong — please try again'});
@@ -311,42 +324,61 @@ function scoreBallot(c, nomineeIds, placements) {
   throw new Error('Invalid ballot');
 }
 
-function recordVote(b) {
-  const voter = String(b.voter || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+function cleanVoter(name) {
+  return String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+}
+
+// Names are compared ignoring capitals and extra spaces, so "Ben", "ben" and " BEN " are the same voter.
+function nameTaken(voter) {
+  const key = cleanVoter(voter).toLowerCase();
+  return readVotes().some(v => cleanVoter(v.voter).toLowerCase() === key);
+}
+
+const NAME_TAKEN = 'This name has already voted. Votes can\'t be changed. If this is you and something is wrong, message the organisers.';
+
+// One ballot per name for the whole event: every category is sent together, once. A name that already has votes
+// is refused, so nobody can add to or change someone else's ballot. To redo a ballot, an organiser deletes that
+// name's rows in the Votes tab, which frees the name.
+function recordBallot(b) {
+  const voter = cleanVoter(b.voter);
   const code = String(b.code || '').trim().toUpperCase().slice(0, 20);
-  const categoryId = String(b.category || '');
-  const placements = Array.isArray(b.placements) ? b.placements.slice(0, 100) : [];
+  const items = Array.isArray(b.ballots) ? b.ballots.slice(0, 50) : [];
   if (!voter) return {ok: false, error: 'Please enter your name'};
   if (settingsMap().vote_open === 'FALSE') return {ok: false, error: 'Voting is closed'};
-  const c = readTable('Categories').find(x => x.id === categoryId);
-  if (!c) return {ok: false, error: 'Invalid ballot'};
-  if (!isOpen(c, new Date())) return {ok: false, error: c.type === 'special' ? 'This award isn\'t voted on' : 'Voting is closed'};
-  if (!placements.length) return {ok: false, error: 'Empty ballot'};
-  const nomineeIds = readTable('Nominees').filter(n => n.category_id === categoryId).map(n => n.id);
-  let scored;
-  try {
-    scored = scoreBallot(c, nomineeIds, placements.map(p => ({nominee: String(p.nominee), value: String(p.tier || p.value || '')})));
-  } catch (err) {
-    return {ok: false, error: err.message};
-  }
+  if (!items.length) return {ok: false, error: 'Empty ballot'};
 
-  // Voter codes: if the Codes sheet lists any, a valid unused code is required.
+  const cats = readTable('Categories'), noms = readTable('Nominees'), now = new Date(), seen = {};
+  const rows = [];
+  for (const item of items) {
+    const categoryId = String((item && item.category) || '');
+    const c = cats.find(x => x.id === categoryId);
+    if (!c || seen[categoryId]) return {ok: false, error: 'Invalid ballot'};
+    seen[categoryId] = true;
+    if (!isOpen(c, now)) return {ok: false, error: c.type === 'special' ? 'This award isn\'t voted on' : 'Voting is closed'};
+    const placements = Array.isArray(item.placements) ? item.placements.slice(0, 100) : [];
+    if (!placements.length) continue; // a category the voter skipped
+    const nomineeIds = noms.filter(n => n.category_id === categoryId).map(n => n.id);
+    let scored;
+    try {
+      scored = scoreBallot(c, nomineeIds, placements.map(p => ({nominee: String(p.nominee), value: String(p.tier || p.value || '')})));
+    } catch (err) {
+      return {ok: false, error: c.name + ': ' + err.message};
+    }
+    scored.forEach(s => rows.push({timestamp: now, voter: cell(voter), code: cell(code), category: categoryId,
+      nominee: s.nominee, value: s.value, points: s.points}));
+  }
+  if (!rows.length) return {ok: false, error: 'Empty ballot'};
+  if (nameTaken(voter)) return {ok: false, error: NAME_TAKEN, taken: true};
+
+  // Voter codes: if the Codes sheet lists any, a valid code that hasn't voted yet is required.
   const codeRows = sheet('Codes').getDataRange().getValues().slice(1);
   if (codeRows.length) {
-    if (!codeRows.some(r => String(r[0]).toUpperCase() === code && !r[1])) return {ok: false, error: 'Unknown voter code'};
-    if (codeRows.some(r => String(r[0]).toUpperCase() === code && r[1] === categoryId)) {
-      return {ok: false, error: 'This code already voted in this category'};
-    }
-    appendRow('Codes', [cell(code), categoryId, cell(voter), new Date()]);
-  } else {
-    const key = voter.toLowerCase();
-    if (readVotes().some(v => v.voter.toLowerCase() === key && v.category === categoryId)) {
-      return {ok: false, error: 'You already voted in this category'};
-    }
+    const mine = codeRows.filter(r => String(r[0]).toUpperCase() === code);
+    if (!code || !mine.some(r => !r[1])) return {ok: false, error: 'Unknown voter code'};
+    if (mine.some(r => r[1])) return {ok: false, error: 'This code has already voted'};
+    appendRow('Codes', [cell(code), 'all', cell(voter), now]);
   }
-  const now = new Date();
-  appendVotes(scored.map(s => ({timestamp: now, voter: cell(voter), code: cell(code), category: categoryId,
-    nominee: s.nominee, value: s.value, points: s.points})));
+  appendVotes(rows);
   return {ok: true};
 }
 

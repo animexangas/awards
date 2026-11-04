@@ -85,6 +85,8 @@ Only the two published tabs become public, and only you can edit them. Anything 
 
 ## How voting works
 
+- **Name first:** voters enter their name before they see the ballot. It's used for every category, and the page checks with the Sheet straight away whether that name has already voted (ignoring capitals and extra spaces).
+- **One submission:** voters fill in every category (or skip some), see a summary, and submit everything at once. After that the ballot is locked: votes can't be changed or added to, from any device. To redo someone's ballot, delete that name's rows in the `Votes` tab; the name is then free again.
 - Tap a card then tap a tier, or drag it on desktop. Tap ▶ to hear the song on YouTube.
 - Nominees left in the pool score 0, so voters only rank what they know.
 - Tier caps force real choices. You set them in `TIERS` in `vote/index.html`:
@@ -98,7 +100,7 @@ Only the two published tabs become public, and only you can edit them. Anything 
 | D | 1 | — |
 
 - **Ranking:** nominees are ordered by total points. Ties go to whoever has more S placements, then more A, and so on.
-- **After voting:** each voter gets a shareable tier-list image.
+- **After voting:** each voter gets a shareable picture of their picks for each category.
 
 ## Modes
 
@@ -131,7 +133,7 @@ The script checks every ballot, so a tampered page can't change the scoring or i
 - It accepts only known categories, nominees and tiers, and enforces tier caps.
 - It calculates points itself.
 - Names starting with `=`, `+`, `-` or `@` are stored as plain text, never as formulas.
-- It allows one ballot per name per category, or per code if you use codes.
+- It allows one ballot per name for the whole event (and one per code if you use codes), and checks again at submission, so two people can't take the same name at once.
 
 ## Your Sheet
 
@@ -140,7 +142,7 @@ The script checks every ballot, so a tampered page can't change the scoring or i
 | Timestamp | Voter | Code | Category | Nominee | Tier | Points |
 |---|---|---|---|---|---|---|
 
-`Codes` is optional. By default the page asks for a name only (`USE_VOTER_CODES = false` in `vote/index.html`). To use codes, set `USE_VOTER_CODES = true` and put one code per row in column A, leaving the other columns blank. Each code can then vote once per category.
+`Codes` is optional. By default the page asks for a name only (`USE_VOTER_CODES = false` in `vote/index.html`). To use codes, set `USE_VOTER_CODES = true` and put one code per row in column A, leaving the other columns blank. Each code can then vote once.
 
 ## Categories and nominees
 
