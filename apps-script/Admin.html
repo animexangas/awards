@@ -87,6 +87,10 @@ select.no{border-color:#e3e1e8;color:var(--muted)}
 <div id="saving" hidden>Saving…</div>
 
 <script>
+// Shows any script error on the page instead of leaving it on "Loading…".
+window.onerror = (msg, src, line, col) => { const el = document.getElementById('main'); if (el) el.innerHTML = '<div style="color:#c62828;padding:20px;text-align:center">Something went wrong: ' + String(msg).replace(/</g, '&lt;') + ' (line ' + line + ':' + col + ')</div>'; };
+</script>
+<script>
 let STATE = null, TAB = 'categories', OPEN = null, EDIT_NOM = null;
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -144,9 +148,9 @@ function nomineeForm(catId, n){
     <div class="grid">
       <label>Nominee<input name="name" value="${esc(n.name)}" required></label>
       <label>Subtitle (artist, studio…)<input name="subtitle" value="${esc(n.subtitle)}"></label>
-      <label>Image link (optional)<input name="image" value="${esc(n.image)}" placeholder="https://…"></label>
+      <label>Image link (optional)<input name="image" value="${esc(n.image)}" placeholder="https:&#47;&#47;…"></label>
       <label>Anime title, for an automatic poster (optional)<input name="image_search" value="${esc(n.image_search)}" placeholder="e.g. Sousou no Frieren 2nd Season"></label>
-      <label>Watch / listen link (optional)<input name="link" value="${esc(n.link)}" placeholder="https://youtube.com/…"></label>
+      <label>Watch / listen link (optional)<input name="link" value="${esc(n.link)}" placeholder="https:&#47;&#47;youtube.com/…"></label>
     </div>
     <div class="row"><button class="primary">${n.id ? 'Save nominee' : 'Add nominee'}</button>${n.id ? '<button type="button" data-cancel-nom>Cancel</button>' : ''}</div>
   </form>`;
@@ -256,9 +260,14 @@ function renderActivity(){
 // Address of another page of this web app. The page itself runs in a frame on a googleusercontent.com address, so a
 // relative link would open that frame on its own (a blank page). The browser's referrer is the real /exec address;
 // the server's own idea of it is the fallback.
+// Never write two slashes in a row in this script outside a comment: Google's page loader treats them as the start
+// of a comment and drops the rest of the line, even inside text (write &#47;&#47; in HTML instead).
 function pageUrl(page){
-  const m = /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.exec(document.referrer || '');
-  const base = m ? m[0] : STATE.url;
+  let base = STATE.url || '';
+  try {
+    const u = new URL(document.referrer), i = u.pathname.indexOf('/exec');
+    if (u.hostname === 'script.google.com' && u.pathname.indexOf('/macros/') >= 0 && i > 0) base = u.origin + u.pathname.slice(0, i + 5);
+  } catch (e){}
   return base ? base + '?page=' + page : '#';
 }
 

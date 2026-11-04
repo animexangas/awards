@@ -110,6 +110,10 @@ body.busy main{pointer-events:none;opacity:.75;transition:opacity .2s}
 <div id="saving" hidden>Saving…</div>
 
 <script>
+// Shows any script error on the page instead of leaving it on "Loading…".
+window.onerror = (msg, src, line, col) => { const el = document.getElementById('main'); if (el) el.innerHTML = '<div style="color:#c62828;padding:20px;text-align:center">Something went wrong: ' + String(msg).replace(/</g, '&lt;') + ' (line ' + line + ':' + col + ')</div>'; };
+</script>
+<script>
 let STATE = null, TAB = 'open', FILTER = '', OPENC = {};
 // Google's frame can block browser storage, so remembering "guide hidden" is best-effort only.
 const store = {get(k){ try { return localStorage.getItem(k); } catch (e){ return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch (e){} }};
@@ -138,9 +142,14 @@ function call(fn, ...args){
 // Address of another page of this web app. The page itself runs in a frame on a googleusercontent.com address, so a
 // relative link would open that frame on its own (a blank page). The browser's referrer is the real /exec address;
 // the server's own idea of it is the fallback.
+// Never write two slashes in a row in this script outside a comment: Google's page loader treats them as the start
+// of a comment and drops the rest of the line, even inside text (write &#47;&#47; in HTML instead).
 function pageUrl(page){
-  const m = /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.exec(document.referrer || '');
-  const base = m ? m[0] : STATE.url;
+  let base = STATE.url || '';
+  try {
+    const u = new URL(document.referrer), i = u.pathname.indexOf('/exec');
+    if (u.hostname === 'script.google.com' && u.pathname.indexOf('/macros/') >= 0 && i > 0) base = u.origin + u.pathname.slice(0, i + 5);
+  } catch (e){}
   return base ? base + '?page=' + page : '#';
 }
 const methodText = (m, n) => (STATE.methods[m] || STATE.methods.tier).replace('N', n || 3);
@@ -224,7 +233,7 @@ function renderNew(){
       <label>Category <span class="req">*</span><select name="category_ref" required>${nomCats}</select></label>
       <label>Nominee <span class="req">*</span><input name="title" required placeholder="e.g. Frieren Season 2"></label>
       <label>Subtitle (artist, studio…)<input name="subtitle" placeholder="e.g. Madhouse"></label>
-      <label>Link (trailer, MV…)<input name="link" placeholder="https://"></label></div><button class="k-nominee">⭐ Propose nominee</button>` : none}</form></div>
+      <label>Link (trailer, MV…)<input name="link" placeholder="https:&#47;&#47;"></label></div><button class="k-nominee">⭐ Propose nominee</button>` : none}</form></div>
     <div class="formcard k-method">${head('method', 'A different way to vote in an official category. For a proposed category, say it in its comments.')}<form class="propose" data-kind="method">${metCats ? `<div class="grid">
       <label>Category <span class="req">*</span><select name="category_ref" required>${metCats}</select></label>
       <label>Voting method<select name="method">${methods}</select></label>
