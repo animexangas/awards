@@ -88,6 +88,8 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;op
 /* Sideways only: without overflow-y hidden the strip also scrolls up and down a pixel when swiped on a phone. */
 .catnav .wrap{display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding:0 16px;scrollbar-width:none}
 .catnav .wrap::-webkit-scrollbar{display:none}
+/* Blank space at both ends so the first and last categories can also scroll to the centre. */
+.catnav .wrap::before,.catnav .wrap::after{content:"";flex:none;width:calc(50% - 60px)}
 .catnav a{position:relative;flex:none;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:16px 12px;transition:color .2s}
 .catnav a::after{content:"";position:absolute;left:12px;right:12px;bottom:0;height:2px;background:var(--c,var(--gold));transform:scaleX(0);transition:transform .3s var(--ease)}
 .catnav a:hover{color:var(--ink)}
