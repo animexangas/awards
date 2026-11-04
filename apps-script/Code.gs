@@ -27,7 +27,7 @@
  *                kind: category, nominee or method; category_ref: official category id, or a category proposal id
  *                status: open, accepted, rejected or withdrawn
  *   ProposalVotes — proposal_id | email | vote | at   (vote: up or down, one per member per proposal)
- *   Comments   — id | proposal_id | email | text | at
+ *   Comments   — id | proposal_id | email | text | at   (no longer used: comments were removed from the committee page)
  *   Log        — Timestamp | Email | Action | Details
  *   Site       — written by Publish: the public pages read this tab (published to the web as CSV)
  */
@@ -675,21 +675,28 @@ function parseDetails(x) {
   try { return JSON.parse(x || '{}'); } catch (err) { return {}; }
 }
 
-// Proposals with their vote counts, the viewer's own vote, and comments, best-supported first.
-function proposalList(email) {
-  const votes = readTable('ProposalVotes'), comments = readTable('Comments');
+// One proposal as the pages show it: vote counts, who voted which way, and the viewer's own vote.
+function proposalView(p, votes, email, who) {
+  const v = votes.filter(x => x.proposal_id === p.id);
+  const mine = v.find(x => x.email === email);
+  return Object.assign({}, p, {details: parseDetails(p.details), authorName: who(p.author),
+    up: v.filter(x => x.vote === 'up').length, down: v.filter(x => x.vote === 'down').length,
+    upBy: v.filter(x => x.vote === 'up').map(x => who(x.email)), downBy: v.filter(x => x.vote === 'down').map(x => who(x.email)),
+    mine: mine ? mine.vote : ''});
+}
+
+// Member email → display name, from the Committee tab.
+function memberNames() {
   const names = {};
   readTable('Committee').forEach(r => { names[r.email.trim().toLowerCase()] = r.name || r.email.split('@')[0]; });
-  const who = e => names[String(e).toLowerCase()] || String(e).split('@')[0];
-  return readTable('Proposals').map(p => {
-    const v = votes.filter(x => x.proposal_id === p.id);
-    const mine = v.find(x => x.email === email);
-    return Object.assign({}, p, {details: parseDetails(p.details), authorName: who(p.author),
-      up: v.filter(x => x.vote === 'up').length, down: v.filter(x => x.vote === 'down').length,
-      upBy: v.filter(x => x.vote === 'up').map(x => who(x.email)), downBy: v.filter(x => x.vote === 'down').map(x => who(x.email)),
-      mine: mine ? mine.vote : '',
-      comments: comments.filter(c => c.proposal_id === p.id).map(c => ({text: c.text, at: c.at, by: who(c.email)}))});
-  }).sort((a, b) => (b.up - b.down) - (a.up - a.down) || String(a.created).localeCompare(String(b.created)));
+  return e => names[String(e).toLowerCase()] || String(e).split('@')[0];
+}
+
+// Proposals with their vote counts and the viewer's own vote, best-supported first.
+function proposalList(email) {
+  const votes = readTable('ProposalVotes'), who = memberNames();
+  return readTable('Proposals').map(p => proposalView(p, votes, email, who))
+    .sort((a, b) => (b.up - b.down) - (a.up - a.down) || String(a.created).localeCompare(String(b.created)));
 }
 
 function committeeState() {
@@ -746,35 +753,36 @@ function committeePropose(p) {
     }
     const dup = props.some(x => x.status === 'open' && x.kind === kind && x.category_ref === ref && x.title.toLowerCase() === title.toLowerCase());
     if (dup) throw new Error('That has already been proposed. Vote on it instead.');
-    const id = newId();
-    appendRow('Proposals', [id, kind, ref, cell(title), JSON.stringify(details), m.email, new Date().toISOString(), 'open', '']);
-    appendRow('ProposalVotes', [id, m.email, 'up', new Date().toISOString()]); // proposers back their own idea
+    const id = newId(), now = new Date().toISOString();
+    appendRow('Proposals', [id, kind, ref, cell(title), JSON.stringify(details), m.email, now, 'open', '']);
+    appendRow('ProposalVotes', [id, m.email, 'up', now]); // proposers back their own idea
     log(m.email, 'propose ' + kind, title);
-    return committeeState();
+    // Only the new proposal goes back; the page adds it to what it already shows (much faster than resending everything).
+    const p = {id: id, kind: kind, category_ref: ref, title: title, details: JSON.stringify(details), author: m.email,
+      created: now, status: 'open', decided_by: ''};
+    return {proposal: proposalView(p, [{proposal_id: id, email: m.email, vote: 'up'}], m.email, memberNames())};
   });
 }
 
 // vote: 'up', 'down', or '' to clear. One vote per member per proposal.
+// Only this member's row changes (no rewriting the whole tab), and only this proposal's counts go back.
 function committeeVote(id, vote) {
   const m = currentMember();
   return withLock(() => {
     const p = readTable('Proposals').find(x => x.id === id);
     if (!p || p.status !== 'open') throw new Error('This proposal is closed');
-    const rows = readTable('ProposalVotes').filter(x => !(x.proposal_id === id && x.email === m.email));
-    if (vote === 'up' || vote === 'down') rows.push({proposal_id: id, email: m.email, vote: vote, at: new Date().toISOString()});
-    writeTable('ProposalVotes', TABS.ProposalVotes, rows);
-    return committeeState();
-  });
-}
-
-function committeeComment(id, text) {
-  const m = currentMember();
-  return withLock(() => {
-    if (!readTable('Proposals').some(x => x.id === id)) throw new Error('Proposal not found');
-    const t = String(text || '').trim().slice(0, 1000);
-    if (!t) throw new Error('Write something first');
-    appendRow('Comments', [newId(), id, m.email, cell(t), new Date().toISOString()]);
-    return committeeState();
+    vote = vote === 'up' || vote === 'down' ? vote : '';
+    const sh = sheet('ProposalVotes'), values = sh.getDataRange().getValues();
+    let row = -1;
+    for (let i = 1; i < values.length; i++) {
+      if (String(values[i][0]) === id && String(values[i][1]).toLowerCase() === m.email) { row = i + 1; break; }
+    }
+    const now = new Date().toISOString();
+    if (row > 0 && vote) sh.getRange(row, 3, 1, 2).setValues([[vote, now]]);
+    else if (row > 0) sh.deleteRow(row);
+    else if (vote) sh.appendRow([id, m.email, vote, now]);
+    forget('ProposalVotes');
+    return proposalView(p, readTable('ProposalVotes'), m.email, memberNames());
   });
 }
 
@@ -787,7 +795,7 @@ function committeeWithdraw(id) {
     p.status = 'withdrawn';
     writeTable('Proposals', TABS.Proposals, rows);
     log(m.email, 'withdraw proposal', p.title);
-    return committeeState();
+    return {id: id, status: 'withdrawn'};
   });
 }
 

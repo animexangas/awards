@@ -200,7 +200,7 @@ function renderProposals(){
       const d = p.details;
       const info = p.kind === 'category' ? (d.type === 'special' ? 'Special award' : (STATE.methods[d.method] || '').replace('N', d.max_picks || 3)) + (d.description ? ' · ' + d.description : '')
         : p.kind === 'method' ? 'For ' + catLabel(p.category_ref) : 'In ' + catLabel(p.category_ref) + (d.subtitle ? ' · ' + d.subtitle : '');
-      return `<tr><td><b>👍 ${p.up} · 👎 ${p.down}</b><div class="meta">${esc(p.comments.length)} comments</div></td>
+      return `<tr><td><b>👍 ${p.up} · 👎 ${p.down}</b></td>
         <td><span class="tag">${p.kind}</span> <b>${esc(p.title)}</b><div class="meta">by ${esc(p.authorName)}</div></td><td class="meta">${esc(info)}</td>
         <td class="num"><button class="icon" data-accept="${p.id}">Accept</button> <button class="icon danger" data-rejectp="${p.id}">Reject</button></td></tr>`;
     }).join('')}</table></div></div>` : '<p class="note">No open proposals.</p>');
