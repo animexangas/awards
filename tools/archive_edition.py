@@ -2,9 +2,9 @@
 
     python3 archive_edition.py 2026
 
-Reads NOMINEES_CSV and SETTINGS_CSV from awards/<year>/index.html. If they're published Google Sheet links, it
-downloads both into awards/<year>/data/, turns voting off in the saved settings, downloads nominee pictures
-hosted elsewhere into awards/img/<year>/, and points the page back at the saved files. After that the edition
+Reads NOMINEES_CSV and SETTINGS_CSV from <year>/index.html. If they're published Google Sheet links, it
+downloads both into <year>/data/, turns voting off in the saved settings, downloads nominee pictures
+hosted elsewhere into img/<year>/, and points the page back at the saved files. After that the edition
 no longer depends on the Sheet, like 2025. Running it again on an archived edition changes nothing.
 
 Run from the Pages workflow (Actions -> Deploy -> Run workflow -> archive year), which has internet access.
@@ -17,7 +17,7 @@ import sys
 import urllib.parse
 import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # awards/
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repository root
 UA = {'User-Agent': 'axa-awards-archiver'}
 
 
@@ -33,7 +33,7 @@ def slug(s):
 def main():
     year = sys.argv[1] if len(sys.argv) > 1 else ''
     if not re.fullmatch(r'\d{4}', year) or not os.path.isdir(os.path.join(ROOT, year)):
-        print(f'archive: no edition folder awards/{year}')
+        print(f'archive: no edition folder {year}/')
         return 1
     page_path = os.path.join(ROOT, year, 'index.html')
     page = open(page_path, encoding='utf-8').read()

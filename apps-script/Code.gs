@@ -2,7 +2,7 @@
  * Anime X Angas Awards — Google Sheets backend and committee dashboard (2026 onwards).
  *
  * Bound to a private Google Sheet (Extensions → Apps Script) holding one edition. Two web app deployments of
- * this same script (see awards/README.md):
+ * this same script (see README.md):
  *   Public   — Execute as: Me · Who has access: Anyone. Accepts ballots from the public ballot page.
  *   Committee — Execute as: User accessing · Who has access: Anyone with Google account.
  *               ?page=committee  committee page: propose categories, nominees and voting methods, vote and comment
@@ -32,7 +32,7 @@
  *   Site       — written by Publish: the public pages read this tab (published to the web as CSV)
  */
 
-// Tier list points and caps (max nominees per tier, 0 = no limit). Must match TIERS in awards/vote/index.html.
+// Tier list points and caps (max nominees per tier, 0 = no limit). Must match TIERS in vote/index.html.
 const TIERS = {
   S: {points: 5, cap: 1},
   A: {points: 4, cap: 2},

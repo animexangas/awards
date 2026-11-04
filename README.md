@@ -1,17 +1,19 @@
 # Anime X Angas Awards
 
+Website, ballot and committee tools for the Anime X Angas community awards. Live at https://benburnsred.github.io/awards/
+
 **First time setting up the Google Sheet? Follow [SETUP.md](SETUP.md) step by step.**
 
 | Page | URL | What it is |
 |---|---|---|
-| Awards 2025 | https://benburnsred.github.io/anivote/awards/2025/ | Permanent page for the 2025 edition: categories, nominees, winners |
-| Awards 2026 | https://benburnsred.github.io/anivote/awards/2026/ | Current edition: voting open, winners hidden until the ceremony |
-| Latest awards | https://benburnsred.github.io/anivote/awards/ | Forwards to the newest edition (currently 2026) |
-| Ballot | https://benburnsred.github.io/anivote/awards/vote/ | Tier-list voting, saved to a private Google Sheet |
+| Awards 2025 | https://benburnsred.github.io/awards/2025/ | Permanent page for the 2025 edition: categories, nominees, winners |
+| Awards 2026 | https://benburnsred.github.io/awards/2026/ | Current edition: voting open, winners hidden until the ceremony |
+| Latest awards | https://benburnsred.github.io/awards/ | Forwards to the newest edition (currently 2026) |
+| Ballot | https://benburnsred.github.io/awards/vote/ | Tier-list voting, saved to a private Google Sheet |
 
-# Awards site (`awards/<year>/index.html`)
+# Awards site (`<year>/index.html`)
 
-Each edition lives in its own folder (`awards/2025/`) with its own copy of the page and data, so it stays exactly as it is when the next year's page is built or redesigned. Shared images such as the trophy live in `awards/img/`.
+Each edition lives in its own folder (`2025/`) with its own copy of the page and data, so it stays exactly as it is when the next year's page is built or redesigned. Shared images such as the trophy live in `img/`.
 
 Everything on a year's page comes from two tables in its folder, so you never edit code to change it:
 - `data/nominees.csv`: categories and nominees
@@ -21,7 +23,7 @@ Either edit those files or point the page at a Google Sheet you manage.
 
 ## Cover art
 
-Every deploy runs `awards/tools/fetch_covers.py`: for each nominee with an `image_search` title and no `image`, it finds the poster on AniList (then Jikan / MyAnimeList), saves it to `awards/img/covers/`, fills in `image`, and commits the result. Pages load covers from the site itself, so they keep working even when those services are down, and archived years stay complete. The step's summary on the Actions tab lists any titles it couldn't find; give those a different `image_search` (or alternatives separated by ` | `) or paste an image link into `image`.
+Every deploy runs `tools/fetch_covers.py`: for each nominee with an `image_search` title and no `image`, it finds the poster on AniList (then Jikan / MyAnimeList), saves it to `img/covers/`, fills in `image`, and commits the result. Pages load covers from the site itself, so they keep working even when those services are down, and archived years stay complete. The step's summary on the Actions tab lists any titles it couldn't find; give those a different `image_search` (or alternatives separated by ` | `) or paste an image link into `image`.
 
 ## Nominees table
 
@@ -63,9 +65,9 @@ For a live ceremony, set `reveal_winners` to TRUE and fill in each `winner` cell
 
 ## Starting next year's edition
 
-1. Copy the latest year's folder (e.g. `awards/2026/`) to the new year (`awards/2027/`).
+1. Copy the latest year's folder (e.g. `2026/`) to the new year (`2027/`).
 2. Replace the new folder's `data/nominees.csv` with the new categories (or point it at a new Google Sheet) and update `settings.csv`: new `title`, `date`, `reveal_winners` FALSE, `vote_open` TRUE.
-3. In `awards/index.html`, change every year link to the new year so `/awards/` forwards to the new edition.
+3. In `index.html`, change every year link to the new year so `/awards/` forwards to the new edition.
 4. Optionally add a link to the previous year in the new page's footer (2026 links to `../2025/`).
 
 Earlier years keep working unchanged.
@@ -75,11 +77,11 @@ Earlier years keep working unchanged.
 1. Create a **new** Google Sheet just for the awards content. Don't use the one that stores votes.
 2. Make two tabs, `Nominees` and `Settings`. Import [`2025/data/nominees.csv`](2025/data/nominees.csv) and [`2025/data/settings.csv`](2025/data/settings.csv) as starting templates (**File → Import → Upload → Replace current sheet**).
 3. Go to **File → Share → Publish to web**, choose the `Nominees` tab and **Comma-separated values (.csv)**, then click **Publish** and copy the link. Do the same for `Settings`.
-4. Paste the two links into `NOMINEES_CSV` and `SETTINGS_CSV` at the top of that year's `awards/<year>/index.html` (or send them to me).
+4. Paste the two links into `NOMINEES_CSV` and `SETTINGS_CSV` at the top of that year's `<year>/index.html` (or send them to me).
 
 Only the two published tabs become public, and only you can edit them. Anything you type there is what visitors see.
 
-# Ballot (`awards/vote/index.html`)
+# Ballot (`vote/index.html`)
 
 ## How voting works
 
@@ -112,7 +114,7 @@ Only the two published tabs become public, and only you can edit them. Anything 
    - **Execute as:** Me
    - **Who has access:** Anyone (not "Anyone with Google account", which would make voters sign in)
 5. Click **Deploy** and copy the **Web app URL** (ends in `/exec`).
-6. Paste it into `APPS_SCRIPT_URL` near the top of `awards/vote/index.html` and push to `main`.
+6. Paste it into `APPS_SCRIPT_URL` near the top of `vote/index.html` and push to `main`.
 
 After changing `Code.gs` later, use **Deploy → Manage deployments → Edit → Version: New version** so the URL stays the same.
 
@@ -225,10 +227,6 @@ Votes can live in a separate Google Sheet, for example an existing one:
 
 The Settings tab shows which fields are still unmapped. New ballots are written with readable names into a re-mapped sheet, and with ids into the built-in layout. Committee members need view access to the votes sheet to see results. An Excel file has to be converted first (open it in Google Drive → **File → Save as Google Sheets**). For a sheet that's shaped differently, such as one row per ballot like Google Forms, send it over and an adapter can be added.
 
-## Moving to its own repository
-
-Everything here is self-contained: pages link to each other with relative paths, and nothing refers to the repo name. To give the awards their own repo (e.g. `awards`, owned by animexangas), split out only this folder with its history: `git subtree split --prefix=awards -b awards-only`. Push that branch as `main` of the new repo, and copy `.github/workflows/pages.yml` there with every `awards/` path prefix removed. The AniVote polls page (repo root `index.html`) stays behind.
-
 ## Hosting
 
 - **Now (testing and development):** the Google Sheet and Apps Script run on the repo owner's personal Google account.
@@ -236,7 +234,7 @@ Everything here is self-contained: pages link to each other with relative paths,
   - Committee page: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=committee
   - Admin dashboard: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=admin
   - The 2026 page and the ballot read that Sheet's published Site and Settings tabs, and send votes to its public deployment.
-- **Production:** everything moves to **animexangas@gmail.com**: the Sheet, the Apps Script deployments and, later, this repository (as its own `awards` repo).
+- **Production:** everything moves to **animexangas@gmail.com**: the Sheet, the Apps Script deployments, and this repository (Settings → Transfer; the site then lives at animexangas.github.io/awards/).
 
 To move the Sheet:
 1. Transfer ownership of the Sheet (Share → *Transfer ownership*), or make a fresh copy under animexangas.

@@ -1,8 +1,8 @@
 """Download cover art for awards nominees and save it in the repo.
 
-For every awards/<year>/data/nominees.csv row that has an `image_search` title but no `image`, look the
+For every <year>/data/nominees.csv row that has an `image_search` title but no `image`, look the
 title up on AniList (then Jikan / MyAnimeList). `image_search` can list alternative titles separated by
-" | ", tried in order until one has real cover art. The script then downloads the poster download the poster to awards/img/covers/, and fill in
+" | ", tried in order until one has real cover art. The script then downloads the poster download the poster to img/covers/, and fill in
 `image` with its path. Pages then load covers from the site itself instead of calling those APIs from
 every visitor's browser. Rows that already have an `image` are never touched, so this is safe to rerun.
 
@@ -18,7 +18,7 @@ import time
 import urllib.parse
 import urllib.request
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # awards/
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repository root
 COVERS = os.path.join(ROOT, 'img', 'covers')
 UA = {'User-Agent': 'axa-awards-cover-fetcher'}
 
@@ -106,7 +106,7 @@ def main():
                         print(f'  download failed for {title!r}: {e}')
                         found[title] = None
             if found[title]:
-                # Year pages and the ballot both sit one folder below awards/.
+                # Year pages and the ballot both sit one folder below the repository root.
                 r[ii] = '../img/covers/' + found[title]
                 changed = True
             elif title not in missed:

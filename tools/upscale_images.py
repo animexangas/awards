@@ -1,4 +1,4 @@
-"""Upscale small awards pictures (awards/img/<year>/*) with Real-ESRGAN.
+"""Upscale small awards pictures (img/<year>/*) with Real-ESRGAN.
 
 Pictures cut from presentation slides are only 150-400px wide, which looks soft on large cards. Each picture
 narrower than MIN_WIDTH gets a 4x upscaled copy saved next to it as <name>-hd.<ext> (shrunk to at most
@@ -18,7 +18,7 @@ import sys
 
 from PIL import Image, ImageDraw
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # awards/
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repository root
 SCALE = 4
 MIN_WIDTH = 400
 MAX_WIDTH = 800

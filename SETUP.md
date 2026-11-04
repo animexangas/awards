@@ -12,14 +12,14 @@ Do this once, on a computer, signed in to the Google account that will host it (
 ## Part 2 — Paste the code
 
 3. In the Sheet's menu, click **Extensions → Apps Script**. A new tab opens with a file called `Code.gs`.
-4. Open this link in another tab: https://raw.githubusercontent.com/benburnsred/anivote/main/awards/apps-script/Code.gs
+4. Open this link in another tab: https://raw.githubusercontent.com/benburnsred/awards/main/apps-script/Code.gs
 5. Press **Ctrl + A**, then **Ctrl + C** (copies everything).
 6. Go back to the Apps Script tab. Click inside the code box, press **Ctrl + A**, then **Ctrl + V** (replaces it).
 7. On the left, next to **Files**, click **+** → **HTML**. Type **Admin** (exactly, no `.html`) and press Enter.
-8. Open https://raw.githubusercontent.com/benburnsred/anivote/main/awards/apps-script/Admin.html, press **Ctrl + A**, **Ctrl + C**.
+8. Open https://raw.githubusercontent.com/benburnsred/awards/main/apps-script/Admin.html, press **Ctrl + A**, **Ctrl + C**.
 9. Back in Apps Script, click inside the new `Admin` file, press **Ctrl + A**, **Ctrl + V**.
 10. Click **+** → **HTML** again. Type **Committee** and press Enter.
-11. Open https://raw.githubusercontent.com/benburnsred/anivote/main/awards/apps-script/Committee.html, press **Ctrl + A**, **Ctrl + C**.
+11. Open https://raw.githubusercontent.com/benburnsred/awards/main/apps-script/Committee.html, press **Ctrl + A**, **Ctrl + C**.
 12. Back in Apps Script, click inside the new `Committee` file, press **Ctrl + A**, **Ctrl + V**.
 13. Press **Ctrl + S** to save.
 
@@ -112,7 +112,7 @@ They get wired into the website, and you're done.
 1. Admin dashboard → **Results**: tick each winner. **Categories**: tick winners of special awards.
 2. **Settings** → Voting open: **No**, Reveal winners: **Yes** → **Save settings** → **Publish to site**.
 3. Wait 5 minutes.
-4. Open https://github.com/benburnsred/anivote/actions/workflows/pages.yml
+4. Open https://github.com/benburnsred/awards/actions/workflows/pages.yml
 5. Click **Run workflow** (right side) → type the year (e.g. `2026`) in the box → click the green **Run workflow**.
 6. Wait about 5 minutes. The year's page now runs from files saved in the site, like 2025. It no longer needs the Sheet.
 

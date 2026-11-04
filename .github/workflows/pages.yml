@@ -1,0 +1,89 @@
+name: Deploy Anime X Angas Awards to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      archive_year:
+        description: "Archive an awards edition (e.g. 2026): save its Google Sheet data into the site permanently. Leave blank to just deploy."
+        required: false
+        default: ""
+
+permissions:
+  contents: write  # lets the cover-art step commit downloaded images back to main
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      # Freeze an awards edition that reads a Google Sheet into files in the repo (runs only when a year is given).
+      - name: Archive awards edition
+        if: ${{ github.event.inputs.archive_year != '' }}
+        env:
+          YEAR: ${{ github.event.inputs.archive_year }}
+        run: |
+          python3 tools/archive_edition.py "$YEAR"
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Archive awards $YEAR"
+            git push
+          fi
+      # Download cover art for awards nominees into the repo, so pages don't depend on anime APIs at runtime.
+      # A failure here never blocks the deploy; pages fall back to looking covers up in the browser.
+      - name: Fetch awards cover art
+        continue-on-error: true
+        run: |
+          python3 tools/fetch_covers.py
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Add awards cover art"
+            git push
+          fi
+      # Sharpen small awards pictures (img/<year>/*) 4x with Real-ESRGAN, once each.
+      # torch is only installed when some picture has no -hd copy yet; a failure never blocks the deploy.
+      - name: Upscale awards pictures
+        continue-on-error: true
+        run: |
+          pip install -q pillow
+          PENDING="$(python3 tools/upscale_images.py --pending)"
+          if [ -z "$PENDING" ]; then echo "images: nothing to upscale"; exit 0; fi
+          # torch and torchvision must come from the same (CPU) index, or spandrel's torchvision import fails.
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -q spandrel pillow numpy
+          mkdir -p /tmp/esrgan
+          curl -fsSL -o /tmp/esrgan/RealESRGAN_x4plus_anime_6B.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth
+          curl -fsSL -o /tmp/esrgan/RealESRGAN_x4plus.pth https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+          python3 tools/upscale_images.py
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Upscale awards pictures"
+            git pull --rebase -q origin main
+            git push
+          fi
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
