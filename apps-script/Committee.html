@@ -4,60 +4,120 @@
 <base target="_top">
 <meta charset="utf-8">
 <style>
-:root{--bg:#f6f6f8;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--accent:#a8761f;--bad:#b3261e;--good:#1e7b3a}
+/* Colour guide: every kind of proposal has one colour, used on its tag, card edge, filter and propose button.
+   Category = blue, Nominee = green, Voting method = amber. Support = green, Against = red, Admin = gold. */
+:root{
+  --bg:#f4f4f7;--card:#fff;--ink:#1d1b22;--muted:#6b6878;--line:#e3e1e8;--gold:#b8862b;--gold-bg:#fbf3e0;
+  --cat:#2f6fdb;--cat-bg:#e8f0fe;--nom:#1f8a4c;--nom-bg:#e4f5ea;--met:#b26b00;--met-bg:#fdf0da;
+  --up:#1e8e4a;--up-bg:#e3f4e8;--down:#c62828;--down-bg:#fde7e5;
+  --open:#5b4bb7;--open-bg:#ece9fb;--vote:#0f7d8c;--vote-bg:#e0f3f5;--special:#8a46b5;--special-bg:#f3e8fa;--grey:#6b6878;--grey-bg:#ececf0
+}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
 header h1{margin:0;font-size:17px}
-header .me{color:#b9b5c6;font-size:12px}
-header a{color:#e9c46a;font-size:12px;margin-left:10px}
-nav{display:flex;gap:2px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
-nav button{border:0;background:none;padding:12px 14px;cursor:pointer;color:var(--muted);font:inherit;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
-nav button.on{color:var(--ink);border-color:var(--accent)}
-main{max-width:900px;margin:0 auto;padding:18px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:10px;padding:12px 14px}
+header h1 span{color:#e9c46a}
+.who{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:#cfcbd8;font-size:12px}
+a.btn-admin{display:inline-block;background:#e9c46a;color:#16141c;font-weight:700;font-size:12px;padding:6px 12px;border-radius:6px;text-decoration:none}
+a.btn-admin:hover{background:#f3d78f}
+nav{display:flex;gap:2px;padding:0 18px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{border:0;border-radius:0;background:none;padding:12px 14px;cursor:pointer;color:var(--muted);font:inherit;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:var(--ink);border-color:var(--gold)}
+nav .count{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:99px;background:var(--open-bg);color:var(--open);font-size:11px;font-weight:800;text-align:center}
+main{max-width:920px;margin:0 auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:8px;margin-bottom:10px;padding:12px 14px}
+.card.k-category{border-left-color:var(--cat)}.card.k-nominee{border-left-color:var(--nom)}.card.k-method{border-left-color:var(--met)}
+.card.s-accepted{border-left-color:var(--up)}.card.s-rejected{border-left-color:var(--down)}.card.s-withdrawn{border-left-color:var(--grey)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
-.title{font-weight:700}
+.title{font-weight:700;font-size:15px}
 .meta{color:var(--muted);font-size:12px}
-.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:#eee;color:#444}
-.tag.category{background:#e4ecfd;color:#2a4a9a}.tag.nominee{background:#e3f4e8;color:#1e6b36}.tag.method{background:#fbefd5;color:#8a5a00}
-.tag.accepted{background:var(--good);color:#fff}.tag.rejected,.tag.withdrawn{background:#999;color:#fff}
-button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer}
-button:hover{border-color:#bbb}
+.meta b{color:var(--ink)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--grey-bg);color:var(--grey);white-space:nowrap}
+.tag.category{background:var(--cat-bg);color:var(--cat)}.tag.nominee{background:var(--nom-bg);color:var(--nom)}.tag.method{background:var(--met-bg);color:var(--met)}
+.tag.open{background:var(--open-bg);color:var(--open)}.tag.accepted{background:var(--up);color:#fff}.tag.rejected{background:var(--down);color:#fff}.tag.withdrawn{background:var(--grey);color:#fff}
+.tag.mine-up{background:var(--up-bg);color:var(--up)}.tag.mine-down{background:var(--down-bg);color:var(--down)}.tag.mine-none{background:#fff;color:var(--muted);border:1px dashed var(--line)}
+.tag.vote{background:var(--vote-bg);color:var(--vote)}.tag.special{background:var(--special-bg);color:var(--special)}.tag.locked{background:var(--grey-bg);color:var(--grey)}.tag.how{background:var(--met-bg);color:var(--met)}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+button:hover{border-color:#b9b6c2}
 button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
-button.vote.on.up{background:#e3f4e8;border-color:var(--good);color:var(--good)}
-button.vote.on.down{background:#fde4e1;border-color:var(--bad);color:var(--bad)}
-button.link{border:0;background:none;padding:0;color:var(--muted);text-decoration:underline}
+button.k-category{background:var(--cat);border-color:var(--cat);color:#fff}
+button.k-nominee{background:var(--nom);border-color:var(--nom);color:#fff}
+button.k-method{background:var(--met);border-color:var(--met);color:#fff}
+button.k-category:hover,button.k-nominee:hover,button.k-method:hover{filter:brightness(1.08)}
+button.vote{font-weight:700;min-width:104px;white-space:nowrap}
+button.vote.up{color:var(--up);border-color:#b9dfc6}button.vote.up:hover{background:var(--up-bg)}
+button.vote.down{color:var(--down);border-color:#f0c4bf}button.vote.down:hover{background:var(--down-bg)}
+button.vote.up.on{background:var(--up);border-color:var(--up);color:#fff}
+button.vote.down.on{background:var(--down);border-color:var(--down);color:#fff}
+button.ghost{border-color:transparent;background:none;color:var(--muted);padding:6px 8px}
+button.ghost:hover{background:var(--grey-bg);color:var(--ink)}
+button.danger{border-color:transparent;background:none;color:var(--down);padding:6px 8px}
+button.danger:hover{background:var(--down-bg)}
+.chip{border-radius:99px;font-weight:600;font-size:13px;padding:5px 12px}
+.chip .n{font-weight:800;margin-left:4px;opacity:.8}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.category.on{background:var(--cat);border-color:var(--cat)}.chip.nominee.on{background:var(--nom);border-color:var(--nom)}.chip.method.on{background:var(--met);border-color:var(--met)}
+.chip.category:not(.on){color:var(--cat)}.chip.nominee:not(.on){color:var(--nom)}.chip.method:not(.on){color:var(--met)}
+/* Support bar: green share for, red share against. */
+.support{display:flex;align-items:center;gap:10px;margin:10px 0 8px}
+.bar{flex:1;height:8px;border-radius:99px;background:var(--grey-bg);overflow:hidden;display:flex;min-width:80px}
+.bar i{display:block;height:100%}.bar .u{background:var(--up)}.bar .d{background:var(--down)}
+.net{min-width:44px;text-align:center;font-weight:800;font-size:13px;padding:2px 8px;border-radius:6px;background:var(--grey-bg);color:var(--grey)}
+.net.pos{background:var(--up-bg);color:var(--up)}.net.neg{background:var(--down-bg);color:var(--down)}
+.comments{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.comment{margin:8px 0;padding:8px 10px;background:#faf9fc;border-radius:6px}.comment b{font-size:13px}
+.note{color:var(--muted);font-size:13px;margin:4px 0 14px}
+/* Guide at the top of Open proposals. */
+.guide{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:8px 0 10px}
+.step{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.step .num{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px}
+.step b{display:block}
+.legend{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+h2{font-size:15px;margin:0 0 4px}
+.formcard{background:#fff;border:1px solid var(--line);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.formcard .head{padding:10px 14px;display:flex;align-items:center;gap:10px}
+.formcard.k-category .head{background:var(--cat-bg);color:var(--cat)}.formcard.k-nominee .head{background:var(--nom-bg);color:var(--nom)}.formcard.k-method .head{background:var(--met-bg);color:var(--met)}
+.formcard .head h2{margin:0;color:inherit}
+.formcard .head p{margin:0;font-size:12px;color:var(--muted)}
+.formcard form{padding:12px 14px}
 label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px}
+label .req{color:var(--down)}
 input,select,textarea{display:block;width:100%;margin-top:4px;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(184,134,43,.35);border-color:var(--gold)}
 textarea{min-height:50px;resize:vertical}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0 14px}
-.score{min-width:44px;text-align:center;font-weight:800;font-size:16px}
-.comments{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
-.comment{margin:6px 0}.comment b{font-size:13px}
-.note{color:var(--muted);font-size:13px;margin:4px 0 14px}
-h2{font-size:15px;margin:20px 0 10px}
-ul{margin:6px 0 0;padding-left:18px}
-#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#16141c;color:#fff;padding:9px 14px;border-radius:6px;display:none;max-width:90%}
-#toast.err{background:var(--bad)}
-#saving{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;background:#a8761f;color:#fff;font-weight:700;font-size:13px;padding:7px 16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.noms{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.noms span{background:var(--nom-bg);color:var(--nom);border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600}
+.empty{text-align:center;padding:30px 14px;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:8px}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--up);color:#fff;font-weight:600;padding:10px 16px;border-radius:6px;display:none;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+#toast.err{background:var(--down)}
+#saving{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:20;background:var(--gold);color:#fff;font-weight:700;font-size:13px;padding:7px 16px;border-radius:99px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 #saving::before{content:"";display:inline-block;width:10px;height:10px;margin-right:8px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;vertical-align:-1px;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 body.busy main{pointer-events:none;opacity:.75;transition:opacity .2s}
+@media (max-width:560px){main{padding:12px}button.vote{min-width:0;flex:1 1 40%}}
 </style>
 </head>
 <body>
-<header><h1>Awards Committee</h1><div><span class="me" id="me"></span><a id="adminLink" href="?page=admin" hidden>Admin dashboard →</a></div></header>
-<nav id="tabs"><button data-tab="open" class="on">Open proposals</button><button data-tab="new">Propose</button><button data-tab="ballot">Official ballot</button><button data-tab="closed">Decided</button></nav>
+<header><h1>Awards <span>Committee</span></h1><div class="who"><span id="me"></span><span id="role"></span><a class="btn-admin" id="adminLink" href="#" hidden>Admin dashboard →</a></div></header>
+<nav id="tabs"><button data-tab="open" class="on">Open proposals</button><button data-tab="new">＋ Propose</button><button data-tab="ballot">Official ballot</button><button data-tab="closed">Decided</button></nav>
 <main id="main"><p class="note">Loading…</p></main>
 <div id="toast"></div>
 <div id="saving" hidden>Saving…</div>
 
 <script>
 let STATE = null, TAB = 'open', FILTER = '', OPENC = {};
+let GUIDE = localStorage.getItem('axa.guide') !== 'hidden';
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KIND = {category:{icon:'🏆', label:'Category'}, nominee:{icon:'⭐', label:'Nominee'}, method:{icon:'🗳️', label:'Voting method'}};
+const STATUS = {open:'Open', accepted:'✓ Accepted', rejected:'✕ Rejected', withdrawn:'Withdrawn'};
+const kindTag = k => `<span class="tag ${k}">${KIND[k].icon} ${KIND[k].label}</span>`;
+
 function toast(msg, err){ const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', err ? 6000 : 2500); }
 // Calls a server function and re-renders with the returned state. A "Saving…" badge shows straight away, and the
 // page ignores clicks until the save finishes so nothing is sent twice.
@@ -73,6 +133,14 @@ function call(fn, ...args){
     .withSuccessHandler(s => { busy(-1); STATE = s; render(); resolve(s); })
     .withFailureHandler(e => { busy(-1); toast(e.message || String(e), true); resolve(null); })[fn](...args));
 }
+// Address of another page of this web app. The page itself runs in a frame on a googleusercontent.com address, so a
+// relative link would open that frame on its own (a blank page). The browser's referrer is the real /exec address;
+// the server's own idea of it is the fallback.
+function pageUrl(page){
+  const m = /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.exec(document.referrer || '');
+  const base = m ? m[0] : STATE.url;
+  return base ? base + '?page=' + page : '#';
+}
 const methodText = (m, n) => (STATE.methods[m] || STATE.methods.tier).replace('N', n || 3);
 // Name of the category a proposal belongs to: an official one, or another (proposed) category.
 function catName(ref){
@@ -82,78 +150,117 @@ function catName(ref){
 
 function proposalHTML(p){
   const d = p.details, open = p.status === 'open';
-  const what = p.kind === 'category' ? `${d.type === 'special' ? 'Special award (committee picks the winner)' : 'Public vote · ' + esc(methodText(d.method, d.max_picks))}${d.description ? ' · ' + esc(d.description) : ''}`
-    : p.kind === 'method' ? `Voting method for <b>${esc(catName(p.category_ref))}</b>`
-    : `Nominee for <b>${esc(catName(p.category_ref))}</b>${d.subtitle ? ' · ' + esc(d.subtitle) : ''}${d.link ? ` · <a href="${esc(d.link)}" target="_blank">link</a>` : ''}`;
+  const what = p.kind === 'category'
+      ? `${d.type === 'special' ? '<span class="tag special">Special award · committee picks</span>' : `<span class="tag vote">Public vote</span> <span class="tag how">${esc(methodText(d.method, d.max_picks))}</span>`}`
+    : p.kind === 'method' ? `For <b>${esc(catName(p.category_ref))}</b> → <span class="tag how">${esc(methodText(d.method, d.max_picks))}</span>`
+    : `In <b>${esc(catName(p.category_ref))}</b>${d.subtitle ? ' · ' + esc(d.subtitle) : ''}${d.link ? ` · <a href="${esc(d.link)}" target="_blank">open link ↗</a>` : ''}`;
   const who = list => list.length ? esc(list.join(', ')) : 'nobody yet';
-  return `<div class="card"><div class="row">
-      ${open ? `<button class="vote up${p.mine === 'up' ? ' on' : ''}" data-vote="up" data-id="${p.id}" title="Support: ${who(p.upBy)}">👍 ${p.up}</button>
-      <button class="vote down${p.mine === 'down' ? ' on' : ''}" data-vote="down" data-id="${p.id}" title="Against: ${who(p.downBy)}">👎 ${p.down}</button>` : `<span class="score">${p.up - p.down >= 0 ? '+' : ''}${p.up - p.down}</span>`}
-      <div style="flex:1;min-width:200px"><span class="tag ${p.kind}">${p.kind}</span> ${open ? '' : `<span class="tag ${p.status}">${p.status}</span>`}
-        <span class="title">${esc(p.title)}</span><div class="meta">${what}</div>
-        <div class="meta">Proposed by ${esc(p.authorName)} · for: ${who(p.upBy)} · against: ${who(p.downBy)}</div></div>
+  const total = p.up + p.down, net = p.up - p.down;
+  const mine = !open ? '' : p.mine === 'up' ? '<span class="tag mine-up">You support this</span>'
+    : p.mine === 'down' ? '<span class="tag mine-down">You’re against this</span>' : '<span class="tag mine-none">You haven’t voted</span>';
+  const mineAuthor = p.author === STATE.me.email;
+  return `<div class="card ${open ? 'k-' + p.kind : 's-' + p.status}">
+    <div class="tags">${kindTag(p.kind)}<span class="tag ${p.status}">${STATUS[p.status] || esc(p.status)}</span>${mine}</div>
+    <div class="title">${esc(p.title)}</div>
+    <div class="meta" style="margin-top:3px">${what}</div>
+    ${d.description && p.kind === 'category' ? `<div class="meta" style="margin-top:4px">${esc(d.description)}</div>` : ''}
+    <div class="support" title="For: ${who(p.upBy)} · Against: ${who(p.downBy)}">
+      <span class="net ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}">${net > 0 ? '+' : ''}${net}</span>
+      <div class="bar">${total ? `<i class="u" style="width:${p.up / total * 100}%"></i><i class="d" style="width:${p.down / total * 100}%"></i>` : ''}</div>
+      <span class="meta">${p.up} for · ${p.down} against</span>
     </div>
-    <div class="row" style="margin-top:6px"><button class="link" data-toggle="${p.id}">${p.comments.length} comment${p.comments.length === 1 ? '' : 's'}</button>
-      ${open && p.author === STATE.me.email ? '<span class="spacer"></span><button class="link" data-withdraw="' + p.id + '">Withdraw</button>' : ''}</div>
-    ${OPENC[p.id] ? `<div class="comments">${p.comments.map(c => `<div class="comment"><b>${esc(c.by)}</b> <span class="meta">${esc(new Date(c.at).toLocaleString())}</span><div>${esc(c.text)}</div></div>`).join('') || '<p class="meta">No comments yet.</p>'}
-      ${open ? `<form class="commentform row" data-id="${p.id}"><input name="text" placeholder="Make your case…" style="flex:1;margin:0"><button class="primary">Post</button></form>` : ''}</div>` : ''}
+    <div class="meta">Proposed by <b>${esc(mineAuthor ? 'you' : p.authorName)}</b> · <span style="color:var(--up)">for: ${who(p.upBy)}</span> · <span style="color:var(--down)">against: ${who(p.downBy)}</span></div>
+    <div class="row" style="margin-top:10px">
+      ${open ? `<button class="vote up${p.mine === 'up' ? ' on' : ''}" data-vote="up" data-id="${p.id}">👍 Support</button>
+      <button class="vote down${p.mine === 'down' ? ' on' : ''}" data-vote="down" data-id="${p.id}">👎 Against</button>` : ''}
+      <button class="ghost" data-toggle="${p.id}">💬 ${p.comments.length} comment${p.comments.length === 1 ? '' : 's'} ${OPENC[p.id] ? '▴' : '▾'}</button>
+      ${open && mineAuthor ? '<span class="spacer"></span><button class="danger" data-withdraw="' + p.id + '">Withdraw</button>' : ''}</div>
+    ${OPENC[p.id] ? `<div class="comments">${p.comments.map(c => `<div class="comment"><b>${esc(c.by)}</b> <span class="meta">${esc(new Date(c.at).toLocaleString())}</span><div>${esc(c.text)}</div></div>`).join('') || '<p class="meta">No comments yet. Be the first to make the case.</p>'}
+      ${open ? `<form class="commentform row" data-id="${p.id}"><input name="text" required placeholder="Make your case…" style="flex:1;margin:0"><button class="primary">Post</button></form>` : ''}</div>` : ''}
   </div>`;
 }
 
+function guideHTML(){
+  if (!GUIDE) return `<div class="row" style="justify-content:flex-end;margin:-6px 0 8px"><button class="ghost" data-guide="show">ⓘ How this works</button></div>`;
+  const step = (n, color, title, text) => `<div class="step"><span class="num" style="background:${color}">${n}</span><div><b>${title}</b><span class="meta">${text}</span></div></div>`;
+  return `<div class="guide"><div class="row"><b>How this works</b><span class="spacer"></span><button class="ghost" data-guide="hide">Hide</button></div>
+    <div class="steps">
+      ${step(1, 'var(--cat)', 'Propose', 'A new category, a nominee, or a different voting method.')}
+      ${step(2, 'var(--up)', 'Vote and discuss', '👍 Support or 👎 Against each one (tap again to undo), and argue it out in the comments.')}
+      ${step(3, 'var(--gold)', 'An admin decides', 'Accepted proposals go on the official ballot. Most supported ones are shown first.')}
+    </div>
+    <div class="legend">Colour guide: ${kindTag('category')}${kindTag('nominee')}${kindTag('method')}
+      <span class="tag open">Open</span><span class="tag accepted">✓ Accepted</span><span class="tag rejected">✕ Rejected</span></div></div>`;
+}
+
 function renderOpen(){
-  const list = STATE.proposals.filter(p => p.status === 'open' && (!FILTER || p.kind === FILTER));
-  const f = (k, label) => `<button data-filter="${k}" class="${FILTER === k ? 'primary' : ''}">${label}</button>`;
-  return `<p class="note">Vote 👍 or 👎 on each proposal and argue it out in the comments. Proposals are sorted by support. An admin makes the final call: accepted ones go onto the official ballot. ${STATE.members} committee members.</p>
-    <div class="row" style="margin-bottom:12px">${f('', 'All')}${f('category', 'Categories')}${f('nominee', 'Nominees')}${f('method', 'Voting methods')}<span class="spacer"></span><button class="primary" data-tab="new">+ Propose</button></div>
-    ${list.map(proposalHTML).join('') || '<p class="note">No open proposals. Start one!</p>'}`;
+  const open = STATE.proposals.filter(p => p.status === 'open');
+  const list = open.filter(p => !FILTER || p.kind === FILTER);
+  const notVoted = open.filter(p => !p.mine).length;
+  const chip = (k, label) => `<button class="chip ${k}${FILTER === k ? ' on' : ''}" data-filter="${k}">${label}<span class="n">${k ? open.filter(p => p.kind === k).length : open.length}</span></button>`;
+  return guideHTML()
+    + `<div class="row" style="margin-bottom:12px">${chip('', 'All')}${chip('category', '🏆 Categories')}${chip('nominee', '⭐ Nominees')}${chip('method', '🗳️ Voting methods')}<span class="spacer"></span><button class="primary" data-tab="new">＋ Propose</button></div>`
+    + (open.length ? `<p class="note">${STATE.members} committee members · ${notVoted ? `<b style="color:var(--open)">${notVoted} waiting for your vote</b>` : '<b style="color:var(--up)">You’ve voted on everything ✓</b>'}</p>` : '')
+    + (list.map(proposalHTML).join('') || `<div class="empty">${FILTER ? 'Nothing open of this kind.' : 'No open proposals yet.'}<br><br><button class="primary" data-tab="new">＋ Make the first proposal</button></div>`);
 }
 
 function renderNew(){
   const methods = Object.entries(STATE.methods).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
   const catOpts = (withProposed, unlockedOnly) => STATE.categories.filter(c => !unlockedOnly || c.locked !== 'TRUE').map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')
     + (withProposed ? STATE.proposals.filter(p => p.kind === 'category' && p.status === 'open').map(p => `<option value="${p.id}">${esc(p.title)} (proposed)</option>`).join('') : '');
-  return `<div class="card"><h2 style="margin-top:0">Propose a category</h2><form class="propose" data-kind="category"><div class="grid">
-      <label>Name<input name="title" required placeholder="e.g. Best Fight Scene 2026"></label>
+  const head = (k, text) => `<div class="head"><span style="font-size:22px">${KIND[k].icon}</span><div><h2>Propose a ${KIND[k].label.toLowerCase()}</h2><p>${text}</p></div></div>`;
+  const nomCats = catOpts(true, true), metCats = catOpts(false, true);
+  const none = '<p class="note" style="margin:0">No open categories yet. Propose a category first, or ask an admin to unlock one.</p>';
+  return `<p class="note">Pick what you want to propose. Everyone on the committee can then vote on it. Fields marked <span style="color:var(--down)">*</span> are required.</p>
+    <div class="formcard k-category">${head('category', 'A new award for the ballot, or a special award the committee decides.')}<form class="propose" data-kind="category"><div class="grid">
+      <label>Name <span class="req">*</span><input name="title" required placeholder="e.g. Best Fight Scene 2026"></label>
       <label>Type<select name="type"><option value="vote">Public vote</option><option value="special">Special award / mention (committee picks)</option></select></label>
       <label>Voting method<select name="method">${methods}</select></label>
       <label>N (picks / ranks, for pick N or rank N)<input name="max_picks" type="number" min="1" max="20" placeholder="3"></label></div>
-      <label>Description (optional)<textarea name="description"></textarea></label><button class="primary">Propose category</button></form></div>
-    <div class="card"><h2 style="margin-top:0">Propose a nominee</h2><form class="propose" data-kind="nominee"><div class="grid">
-      <label>Category<select name="category_ref" required>${catOpts(true, true)}</select></label>
-      <label>Nominee<input name="title" required></label>
-      <label>Subtitle (artist, studio…)<input name="subtitle"></label>
-      <label>Link (trailer, MV…)<input name="link" placeholder="https://"></label></div><button class="primary">Propose nominee</button></form></div>
-    <div class="card"><h2 style="margin-top:0">Propose a voting method</h2><p class="note">For an official category. For a proposed category, say it in its comments.</p><form class="propose" data-kind="method"><div class="grid">
-      <label>Category<select name="category_ref" required>${catOpts(false, true)}</select></label>
+      <label>Description (optional)<textarea name="description" placeholder="What is this award for?"></textarea></label><button class="k-category">🏆 Propose category</button></form></div>
+    <div class="formcard k-nominee">${head('nominee', 'Someone or something to compete in a category.')}<form class="propose" data-kind="nominee">${nomCats ? `<div class="grid">
+      <label>Category <span class="req">*</span><select name="category_ref" required>${nomCats}</select></label>
+      <label>Nominee <span class="req">*</span><input name="title" required placeholder="e.g. Frieren Season 2"></label>
+      <label>Subtitle (artist, studio…)<input name="subtitle" placeholder="e.g. Madhouse"></label>
+      <label>Link (trailer, MV…)<input name="link" placeholder="https://"></label></div><button class="k-nominee">⭐ Propose nominee</button>` : none}</form></div>
+    <div class="formcard k-method">${head('method', 'A different way to vote in an official category. For a proposed category, say it in its comments.')}<form class="propose" data-kind="method">${metCats ? `<div class="grid">
+      <label>Category <span class="req">*</span><select name="category_ref" required>${metCats}</select></label>
       <label>Voting method<select name="method">${methods}</select></label>
-      <label>N (for pick N or rank N)<input name="max_picks" type="number" min="1" max="20" placeholder="3"></label></div><button class="primary">Propose method</button></form></div>`;
+      <label>N (for pick N or rank N)<input name="max_picks" type="number" min="1" max="20" placeholder="3"></label></div><button class="k-method">🗳️ Propose voting method</button>` : none}</form></div>`;
 }
 
 function renderBallot(){
-  return `<p class="note">What's official so far (decided by an admin). Locked categories are published and open for voting.</p>` + (STATE.categories.map(c => `<div class="card">
-    <span class="title">${esc(c.name)}</span> ${c.type === 'special' ? '<span class="tag method">special</span>' : ''} ${c.locked === 'TRUE' ? '<span class="tag">locked</span>' : ''}
-    <div class="meta">${c.type === 'special' ? 'Committee picks the winner' : esc(methodText(c.method, c.max_picks))}${c.description ? ' · ' + esc(c.description) : ''}</div>
-    ${c.nominees.length ? `<ul>${c.nominees.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : '<div class="meta">No nominees yet.</div>'}</div>`).join('') || '<p class="note">Nothing official yet.</p>');
+  return `<p class="note">What's official so far (decided by an admin). <span class="tag locked">🔒 Published</span> categories are on the public ballot and can't change until an admin unlocks them.</p>`
+    + (STATE.categories.map(c => `<div class="card" style="border-left-color:${c.type === 'special' ? 'var(--special)' : 'var(--vote)'}">
+    <div class="tags">${c.type === 'special' ? '<span class="tag special">Special award</span>' : '<span class="tag vote">Public vote</span>'}${c.type === 'special' ? '' : `<span class="tag how">${esc(methodText(c.method, c.max_picks))}</span>`}${c.locked === 'TRUE' ? '<span class="tag locked">🔒 Published</span>' : ''}</div>
+    <div class="title">${esc(c.name)}</div>
+    ${c.description ? `<div class="meta">${esc(c.description)}</div>` : ''}
+    ${c.nominees.length ? `<div class="noms">${c.nominees.map(n => `<span>⭐ ${esc(n)}</span>`).join('')}</div>` : `<div class="meta" style="margin-top:6px">No nominees yet. <button class="ghost" data-tab="new" style="padding:0 4px;color:var(--nom)">Propose one →</button></div>`}</div>`).join('')
+    || '<div class="empty">Nothing official yet.</div>');
 }
 
 function renderClosed(){
   const list = STATE.proposals.filter(p => p.status !== 'open').sort((a, b) => String(b.created).localeCompare(String(a.created)));
-  return list.map(proposalHTML).join('') || '<p class="note">Nothing decided yet.</p>';
+  return `<p class="note">Proposals an admin has decided, newest first: <span class="tag accepted">✓ Accepted</span> <span class="tag rejected">✕ Rejected</span> <span class="tag withdrawn">Withdrawn</span></p>`
+    + (list.map(proposalHTML).join('') || '<div class="empty">Nothing decided yet.</div>');
 }
 
 function render(){
-  $('#me').textContent = `${STATE.me.name} (${STATE.me.email})`;
+  $('#me').textContent = `👤 ${STATE.me.name} · ${STATE.me.email}`;
+  $('#role').innerHTML = STATE.me.admin ? '<span class="tag" style="background:#e9c46a;color:#16141c">Admin</span>' : '<span class="tag" style="background:#3a3644;color:#e8e5ef">Member</span>';
   $('#adminLink').hidden = !STATE.me.admin;
-  const n = STATE.proposals.filter(p => p.status === 'open').length;
-  $('[data-tab=open]').textContent = `Open proposals (${n})`;
+  $('#adminLink').href = pageUrl('admin');
+  const n = STATE.proposals.filter(p => p.status === 'open' && !p.mine).length;
+  $('[data-tab=open]').innerHTML = `Open proposals${n ? `<span class="count" title="Waiting for your vote">${n}</span>` : ''}`;
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
   $('#main').innerHTML = {open:renderOpen, new:renderNew, ballot:renderBallot, closed:renderClosed}[TAB]();
 }
 
 document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
+  if (t.dataset.tab){ TAB = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
   if ('filter' in t.dataset){ FILTER = t.dataset.filter; render(); return; }
+  if (t.dataset.guide){ GUIDE = t.dataset.guide === 'show'; localStorage.setItem('axa.guide', GUIDE ? 'shown' : 'hidden'); render(); return; }
   if (t.dataset.vote){
     const p = STATE.proposals.find(x => x.id === t.dataset.id), next = p.mine === t.dataset.vote ? '' : t.dataset.vote;
     // Show the new count right away; the server's answer replaces it a moment later.
@@ -170,14 +277,14 @@ document.addEventListener('submit', e => {
   const f = e.target, d = Object.fromEntries(new FormData(f).entries());
   if (f.classList.contains('propose')){
     d.kind = f.dataset.kind;
-    call('committeePropose', d).then(s => { if (s){ toast('Proposed. Now rally support!'); TAB = 'open'; FILTER = ''; render(); } });
+    call('committeePropose', d).then(s => { if (s){ toast('Proposed! Now rally support.'); TAB = 'open'; FILTER = ''; render(); } });
   } else if (f.classList.contains('commentform')){
     call('committeeComment', f.dataset.id, d.text).then(s => s && (OPENC[f.dataset.id] = true, render()));
   }
 });
 
 google.script.run.withSuccessHandler(s => { STATE = s; render(); })
-  .withFailureHandler(e => { $('#main').innerHTML = `<p class="note" style="color:var(--bad)">${esc(e.message || e)}</p>`; }).committeeState();
+  .withFailureHandler(e => { $('#main').innerHTML = `<div class="empty" style="color:var(--down)">${esc(e.message || e)}</div>`; }).committeeState();
 </script>
 </body>
 </html>

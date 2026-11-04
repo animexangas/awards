@@ -79,7 +79,7 @@ select.no{border-color:#e3e1e8;color:var(--muted)}
 </style>
 </head>
 <body>
-<header><h1>Awards Admin</h1><div class="row"><span class="me" id="me"></span><a href="?page=committee" style="color:#e9c46a;font-size:12px">Committee page</a><button class="primary" id="publish">Publish to site</button></div></header>
+<header><h1>Awards Admin</h1><div class="row"><span class="me" id="me"></span><a id="committeeLink" href="#" style="color:#e9c46a;font-size:12px">Committee page</a><button class="primary" id="publish">Publish to site</button></div></header>
 <nav id="tabs"><button data-tab="proposals">Proposals</button><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
 <div class="status" id="status"></div>
 <main id="main"><div id="loading">Loading…</div></main>
@@ -253,8 +253,18 @@ function renderActivity(){
     `<tr><td class="meta">${esc(new Date(l.Timestamp).toLocaleString())}</td><td>${esc(l.Email)}</td><td>${esc(l.Action)} <span class="meta">${esc(l.Details)}</span></td></tr>`).join('') || '<tr><td colspan="3" class="note">Nothing yet.</td></tr>'}</table></div></div>`;
 }
 
+// Address of another page of this web app. The page itself runs in a frame on a googleusercontent.com address, so a
+// relative link would open that frame on its own (a blank page). The browser's referrer is the real /exec address;
+// the server's own idea of it is the fallback.
+function pageUrl(page){
+  const m = /^https:\/\/script\.google\.com\/(a\/[^/]+\/)?macros\/s\/[\w-]+\/exec/.exec(document.referrer || '');
+  const base = m ? m[0] : STATE.url;
+  return base ? base + '?page=' + page : '#';
+}
+
 function render(){
   $('#me').textContent = STATE.email;
+  $('#committeeLink').href = pageUrl('committee');
   const st = STATE.settings, cats = STATE.categories;
   const ballots = cats.reduce((n, c) => n + (Number(c.ballots) || 0), 0);
   $('#status').innerHTML = [

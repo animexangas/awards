@@ -422,6 +422,16 @@ function log(email, action, details) {
   appendRow('Log', [new Date(), email, action, cell(String(details || '').slice(0, 500))]);
 }
 
+// This deployment's /exec address. The pages run inside a frame on another Google domain, so a link such as
+// "?page=admin" would point at that frame instead of the web app; the pages build their links from this.
+function appUrl() {
+  try {
+    return ScriptApp.getService().getUrl() || '';
+  } catch (err) {
+    return '';
+  }
+}
+
 function adminState() {
   const email = requireCommittee();
   const categories = readTable('Categories').sort((a, b) => Number(a.order) - Number(b.order));
@@ -441,6 +451,7 @@ function adminState() {
   });
   return {
     email: email,
+    url: appUrl(),
     methods: METHODS,
     settings: settingsMap(),
     categories: categories.map(c => Object.assign(c, {ballots: Object.keys(counts[c.id] || {}).length})),
@@ -687,6 +698,7 @@ function committeeState() {
   const noms = readTable('Nominees');
   return {
     me: m,
+    url: appUrl(),
     methods: METHODS,
     members: readTable('Committee').filter(r => r.email.trim()).length,
     categories: cats.map(c => ({id: c.id, name: c.name, description: c.description, type: c.type, method: c.method,
