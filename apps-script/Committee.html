@@ -12,7 +12,7 @@
   --up:#1e8e4a;--up-bg:#e3f4e8;--down:#c62828;--down-bg:#fde7e5;
   --open:#5b4bb7;--open-bg:#ece9fb;--vote:#0f7d8c;--vote-bg:#e0f3f5;--special:#8a46b5;--special-bg:#f3e8fa;--grey:#6b6878;--grey-bg:#ececf0
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
 header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 18px;background:#16141c;color:#fff}
 header h1{margin:0;font-size:17px}
@@ -111,7 +111,9 @@ body.busy main{pointer-events:none;opacity:.75;transition:opacity .2s}
 
 <script>
 let STATE = null, TAB = 'open', FILTER = '', OPENC = {};
-let GUIDE = localStorage.getItem('axa.guide') !== 'hidden';
+// Google's frame can block browser storage, so remembering "guide hidden" is best-effort only.
+const store = {get(k){ try { return localStorage.getItem(k); } catch (e){ return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch (e){} }};
+let GUIDE = store.get('axa.guide') !== 'hidden';
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const KIND = {category:{icon:'🏆', label:'Category'}, nominee:{icon:'⭐', label:'Nominee'}, method:{icon:'🗳️', label:'Voting method'}};
@@ -260,7 +262,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   if (t.dataset.tab){ TAB = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
   if ('filter' in t.dataset){ FILTER = t.dataset.filter; render(); return; }
-  if (t.dataset.guide){ GUIDE = t.dataset.guide === 'show'; localStorage.setItem('axa.guide', GUIDE ? 'shown' : 'hidden'); render(); return; }
+  if (t.dataset.guide){ GUIDE = t.dataset.guide === 'show'; store.set('axa.guide', GUIDE ? 'shown' : 'hidden'); render(); return; }
   if (t.dataset.vote){
     const p = STATE.proposals.find(x => x.id === t.dataset.id), next = p.mine === t.dataset.vote ? '' : t.dataset.vote;
     // Show the new count right away; the server's answer replaces it a moment later.
