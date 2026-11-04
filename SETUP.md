@@ -88,8 +88,8 @@ They get wired into the website, and you're done.
 
 ## Every day after that
 
-- **Committee:** open the committee link → propose, vote 👍/👎, comment.
-- **Admin:** open the admin link:
+- **Committee:** open https://benburnsred.github.io/awards/committee/ → propose, vote 👍/👎, comment.
+- **Admin:** open https://benburnsred.github.io/awards/admin/:
   - **Proposals:** accept or reject.
   - **Categories:** tidy up.
   - **Publish to site:** puts it on the website.

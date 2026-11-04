@@ -10,6 +10,8 @@ Website, ballot and committee tools for the Anime X Angas community awards. Live
 | Awards 2026 | https://benburnsred.github.io/awards/2026/ | Current edition: voting open, winners hidden until the ceremony |
 | Latest awards | https://benburnsred.github.io/awards/ | Forwards to the newest edition (currently 2026) |
 | Ballot | https://benburnsred.github.io/awards/vote/ | Tier-list voting, saved to a private Google Sheet |
+| Committee page | https://benburnsred.github.io/awards/committee/ | Short link to the committee's proposals page (Google sign-in) |
+| Admin dashboard | https://benburnsred.github.io/awards/admin/ | Short link to the admin dashboard (Google sign-in, admins only) |
 
 # Awards site (`<year>/index.html`)
 
@@ -161,7 +163,7 @@ These are popular 2026 anime songs from the Billboard JAPAN Hot Animation mid-ye
 
 # Committee page (2026 onwards)
 
-Where the committee argues out what goes on the ballot: `…/exec?page=committee` (same deployment as the admin dashboard).
+Where the committee argues out what goes on the ballot: https://benburnsred.github.io/awards/committee/ (forwards to `…/exec?page=committee`, the same deployment as the admin dashboard).
 
 - **Propose** a category (name, type, voting method), a nominee (for an official or a proposed category), or a different voting method for an official category. Duplicates are refused.
 - **Vote** 👍 / 👎 on any open proposal: one vote per member, changeable, and the proposer's 👍 is added automatically. Everyone can see who voted which way.
@@ -233,13 +235,14 @@ The Settings tab shows which fields are still unmapped. New ballots are written 
 
 - **Now (testing and development):** the Google Sheet and Apps Script run on the repo owner's personal Google account.
   - Sheet: https://docs.google.com/spreadsheets/d/1cuj9sGnpjmltqg7PG16baC7fxtFll_TSfaAcSiDdsv4/edit
-  - Committee page: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=committee
-  - Admin dashboard: https://script.google.com/macros/s/AKfycbys-lShR1nS3OCaCsEGdYPpIhQyuOyaPIy8RbdMzXE6V0doSdHgmTsFX705oQUgbDIEUQ/exec?page=admin
+  - Committee page: https://benburnsred.github.io/awards/committee/
+  - Admin dashboard: https://benburnsred.github.io/awards/admin/
+  - Both short links forward to the committee deployment. Its full URL is `COMMITTEE_APP` in [`committee/index.html`](committee/index.html) and [`admin/index.html`](admin/index.html).
   - The 2026 page and the ballot read that Sheet's published Site and Settings tabs, and send votes to its public deployment.
 - **Production:** everything moves to **animexangas@gmail.com**: the Sheet, the Apps Script deployments, and this repository (Settings → Transfer; the site then lives at animexangas.github.io/awards/).
 
 To move the Sheet:
 1. Transfer ownership of the Sheet (Share → *Transfer ownership*), or make a fresh copy under animexangas.
 2. Signed in as animexangas, create both web app deployments again. Deployments run as the account that made them, so the URLs change.
-3. Update `APPS_SCRIPT_URL` and the published CSV links in `vote/index.html` and the edition's `index.html`.
+3. Update `APPS_SCRIPT_URL` and the published CSV links in `vote/index.html` and the edition's `index.html`, and `COMMITTEE_APP` in `committee/index.html` and `admin/index.html` (the short links then point at the new deployment).
 4. Clear test data (`Votes`, `Proposals`, `ProposalVotes`, `Comments`, `Log`) before launch.
