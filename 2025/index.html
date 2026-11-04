@@ -471,7 +471,7 @@ addEventListener('scroll', () => {
   document.querySelectorAll('#catlinks a').forEach(a => {
     const on = a.getAttribute('href') === '#' + cur;
     // Scroll the nav strip itself; scrollIntoView would cancel the page's smooth scroll.
-    if (on && !a.classList.contains('on')){ const nav = a.parentNode; nav.scrollTo({left:a.offsetLeft - nav.clientWidth / 2 + a.clientWidth / 2}); }
+    if (on && !a.classList.contains('on')){ const nav = a.parentNode; nav.scrollTo({left:nav.scrollLeft + a.getBoundingClientRect().left - nav.getBoundingClientRect().left - nav.clientWidth / 2 + a.clientWidth / 2}); }
     a.classList.toggle('on', on);
   });
 }, {passive:true});
