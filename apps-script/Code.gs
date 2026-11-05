@@ -799,6 +799,35 @@ function committeeWithdraw(id) {
   });
 }
 
+// Move an open nominee proposal to another category (an official one, or a proposed category that's still open).
+// Allowed for the person who proposed it and for admins. Votes stay with it. Only its category cell is written.
+function committeeMoveProposal(id, ref) {
+  const m = currentMember();
+  return withLock(() => {
+    const props = readTable('Proposals'), p = props.find(x => x.id === id);
+    if (!p || p.status !== 'open') throw new Error('This proposal is closed');
+    if (p.kind !== 'nominee') throw new Error('Only nominees can be moved to another category');
+    if (p.author !== m.email && !m.admin) throw new Error('Only the person who proposed it, or an admin, can change its category');
+    ref = String(ref || '');
+    if (ref === p.category_ref) return proposalView(p, readTable('ProposalVotes'), m.email, memberNames());
+    const official = readTable('Categories').find(c => c.id === ref);
+    const proposed = props.find(x => x.id === ref && x.kind === 'category' && x.status === 'open');
+    if (!official && !proposed) throw new Error('Pick a category');
+    if (official && official.locked === 'TRUE') throw new Error('That category is locked for voting');
+    if (props.some(x => x.status === 'open' && x.kind === 'nominee' && x.category_ref === ref && x.title.toLowerCase() === p.title.toLowerCase()))
+      throw new Error('That nominee is already proposed in that category');
+    const from = p.category_ref;
+    const sh = sheet('Proposals'), ids = sh.getRange(1, 1, sh.getLastRow(), 1).getValues();
+    const row = ids.findIndex(r => String(r[0]) === id) + 1;
+    if (row < 2) throw new Error('This proposal is closed');
+    sh.getRange(row, TABS.Proposals.indexOf('category_ref') + 1).setValue(ref);
+    forget('Proposals');
+    p.category_ref = ref;
+    log(m.email, 'move nominee', p.title + ': ' + from + ' → ' + ref);
+    return proposalView(p, readTable('ProposalVotes'), m.email, memberNames());
+  });
+}
+
 // Admin: accept a proposal (it becomes part of the official ballot) or reject it.
 function adminDecideProposal(id, decision) {
   const email = requireCommittee();

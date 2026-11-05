@@ -53,6 +53,8 @@ button.vote.down{color:var(--down);border-color:#f0c4bf}button.vote.down:hover{b
 button.vote.up.on{background:var(--up);border-color:var(--up);color:#fff}
 button.vote.down.on{background:var(--down);border-color:var(--down);color:#fff}
 button.ghost{border-color:transparent;background:none;color:var(--muted);padding:6px 8px}
+button.ghost.edit{padding:2px 6px;font-size:12px;color:var(--nom)}
+select.movecat{width:auto;max-width:100%;padding:4px 6px;font-size:13px}
 button.ghost:hover{background:var(--grey-bg);color:var(--ink)}
 button.danger{border-color:transparent;background:none;color:var(--down);padding:6px 8px}
 button.danger:hover{background:var(--down-bg)}
@@ -113,7 +115,7 @@ body.busy main{pointer-events:none;opacity:.75;transition:opacity .2s}
 window.onerror = (msg, src, line, col) => { const el = document.getElementById('main'); if (el) el.innerHTML = '<div style="color:#c62828;padding:20px;text-align:center">Something went wrong: ' + String(msg).replace(/</g, '&lt;') + ' (line ' + line + ':' + col + ')</div>'; };
 </script>
 <script>
-let STATE = null, TAB = 'open', FILTER = '';
+let STATE = null, TAB = 'open', FILTER = '', MOVING = '';
 // Google's frame can block browser storage, so remembering "guide hidden" is best-effort only.
 const store = {get(k){ try { return localStorage.getItem(k); } catch (e){ return null; } }, set(k, v){ try { localStorage.setItem(k, v); } catch (e){} }};
 let GUIDE = store.get('axa.guide') !== 'hidden';
@@ -186,12 +188,24 @@ function catName(ref){
   const p = STATE.proposals.find(x => x.id === ref); return p ? p.title + ' (proposed)' : 'Unknown category';
 }
 
+// Category choices for nominees: official categories that aren't locked, then proposed categories still open.
+function nomCatOptions(selected){
+  const opt = (id, name) => `<option value="${id}"${id === selected ? ' selected' : ''}>${esc(name)}</option>`;
+  return STATE.categories.filter(c => c.locked !== 'TRUE').map(c => opt(c.id, c.name)).join('')
+    + STATE.proposals.filter(p => p.kind === 'category' && p.status === 'open').map(p => opt(p.id, p.title + ' (proposed)')).join('');
+}
+
 function proposalHTML(p){
   const d = p.details, open = p.status === 'open';
+  // The proposer and admins can move an open nominee to another category.
+  const canMove = open && p.kind === 'nominee' && (p.author === STATE.me.email || STATE.me.admin);
+  const cat = MOVING === p.id
+    ? `<select class="movecat" data-id="${p.id}">${nomCatOptions(p.category_ref)}</select> <button class="ghost" data-move="">Cancel</button>`
+    : `<b>${esc(catName(p.category_ref))}</b>${canMove ? ` <button class="ghost edit" data-move="${p.id}">✎ Change</button>` : ''}`;
   const what = p.kind === 'category'
       ? `${d.type === 'special' ? '<span class="tag special">Special award · committee picks</span>' : `<span class="tag vote">Public vote</span> <span class="tag how">${esc(methodText(d.method, d.max_picks))}</span>`}`
     : p.kind === 'method' ? `For <b>${esc(catName(p.category_ref))}</b> → <span class="tag how">${esc(methodText(d.method, d.max_picks))}</span>`
-    : `In <b>${esc(catName(p.category_ref))}</b>${d.subtitle ? ' · ' + esc(d.subtitle) : ''}${d.link ? ` · <a href="${esc(d.link)}" target="_blank">open link ↗</a>` : ''}`;
+    : `In ${cat}${d.subtitle ? ' · ' + esc(d.subtitle) : ''}${d.link ? ` · <a href="${esc(d.link)}" target="_blank">open link ↗</a>` : ''}`;
   const who = list => list.length ? esc(list.join(', ')) : 'nobody yet';
   const total = p.up + p.down, net = p.up - p.down;
   return `<div class="card ${open ? 'k-' + p.kind : 's-' + p.status}">
@@ -300,12 +314,24 @@ document.addEventListener('click', e => {
     p.mine = next; render();
     (VOTEQ[p.id] = VOTEQ[p.id] || {}).next = next; sendVote(p.id); return;
   }
+  if ('move' in t.dataset){ MOVING = t.dataset.move; render(); return; }
   if (t.dataset.withdraw){
     if (!confirm('Withdraw your proposal?')) return;
     const p = STATE.proposals.find(x => x.id === t.dataset.withdraw);
     p.status = 'withdrawn'; render(); toast('Withdrawn.');
     background('committeeWithdraw', [p.id]);
   }
+});
+// Picking a new category for a nominee: the card moves at once and the save runs in the background.
+document.addEventListener('change', e => {
+  const sel = e.target.closest('select.movecat'); if (!sel) return;
+  const p = STATE.proposals.find(x => x.id === sel.dataset.id), to = sel.value;
+  MOVING = '';
+  if (!p || to === p.category_ref){ render(); return; }
+  p.category_ref = to; render(); toast('Moved to ' + catName(to) + '.');
+  background('committeeMoveProposal', [p.id, to], r => {
+    const i = STATE.proposals.findIndex(x => x.id === r.id); if (i >= 0){ STATE.proposals[i] = r; render(); }
+  });
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
