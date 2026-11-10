@@ -295,6 +295,85 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
 .brand span{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#e4ece8!important;-webkit-text-fill-color:#e4ece8;text-shadow:0 1px 0 rgba(0,0,0,.6)}
 @media (max-width:600px){.brand{font-size:11px!important;letter-spacing:.08em!important}}
 </style>
+<style>
+/* ===== Pick-one categories: poster cards and a large preview of your pick ===== */
+.picking .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px;padding:12px}
+.picking .card{width:auto;height:auto;aspect-ratio:3/4;transition:transform .25s var(--ease),border-color .25s,box-shadow .25s,filter .25s,opacity .25s}
+.picking .card .img{opacity:.85;background-position:center 30%}
+.picking .card .txt{padding:10px;background:linear-gradient(transparent 45%,rgba(3,8,6,.96))}
+.picking .card .song{white-space:normal;font-size:13px;line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.picking .card .meta{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.picking .card:hover{transform:translateY(-3px)}
+.picking .card.picked{transform:translateY(-3px);border-color:#e9c46a;box-shadow:0 0 0 2px #e9c46a,0 0 30px -4px rgba(255,170,60,.65)}
+.picking .card .badge{top:8px;left:8px}
+/* once something is picked in a pick-one category, the others step back a little */
+.picking:has(.card.picked) .card:not(.picked){filter:saturate(.6) brightness(.75)}
+.picking:has(.card.picked) .card:not(.picked):hover{filter:none}
+
+.spot{position:relative;margin:4px 0 18px;padding:26px 16px 22px;text-align:center;isolation:isolate}
+.spot::before{content:"";position:absolute;left:50%;top:54%;width:min(440px,92vw);aspect-ratio:1;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,170,60,.16) 0,rgba(62,224,138,.10) 38%,transparent 66%)}
+.spot-k{font:400 11px/1 var(--wide);letter-spacing:.42em;padding-left:.42em;text-transform:uppercase;color:#e9c46a;margin-bottom:16px;text-shadow:0 0 3px #030806,0 0 10px rgba(3,8,6,.9)}
+.spot-k::before,.spot-k::after{content:"";display:inline-block;vertical-align:middle;width:28px;height:1px;margin:0 12px;background:linear-gradient(90deg,transparent,#c99a3c)}
+.spot-k::after{background:linear-gradient(90deg,#c99a3c,transparent)}
+.spot-row{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.pick{position:relative;width:min(260px,62vw);aspect-ratio:3/4;overflow:hidden;background:linear-gradient(150deg,#12302a,#060b09 75%);
+  box-shadow:0 0 0 2px #e9c46a,0 0 0 5px rgba(3,8,6,.9),0 0 0 6px #8d9a95,0 0 60px -6px rgba(255,150,50,.55),0 30px 60px -20px rgba(0,0,0,.9);animation:pickIn .5s var(--ease) both}
+.spot.many .pick{width:min(170px,40vw)}
+.pick .art{position:absolute;inset:0;background:center 30%/cover no-repeat;display:grid;place-items:center}
+.pick .mono{font:900 64px/1 var(--tech);color:rgba(233,196,106,.35)}
+.pick .cap{position:absolute;left:0;right:0;bottom:0;padding:44px 14px 14px;text-align:left;background:linear-gradient(transparent,rgba(3,8,6,.95) 55%)}
+.pick .nm{font:800 18px/1.15 var(--sans);color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.8)}
+.spot.many .pick .nm{font-size:14px}
+.pick .mt{margin-top:4px;font-size:12px;color:#c9d3cf}
+.pick .ord{position:absolute;top:10px;left:10px;min-width:30px;height:30px;padding:0 8px;border-radius:15px;background:var(--metal);color:#16120a;font:900 15px/30px var(--tech);text-align:center}
+.pick::after{content:"";position:absolute;inset:7px;pointer-events:none;
+  background:
+   linear-gradient(#e9c46a,#e9c46a) top left/18px 2px,linear-gradient(#e9c46a,#e9c46a) top left/2px 18px,
+   linear-gradient(#e9c46a,#e9c46a) top right/18px 2px,linear-gradient(#e9c46a,#e9c46a) top right/2px 18px,
+   linear-gradient(#e9c46a,#e9c46a) bottom left/18px 2px,linear-gradient(#e9c46a,#e9c46a) bottom left/2px 18px,
+   linear-gradient(#e9c46a,#e9c46a) bottom right/18px 2px,linear-gradient(#e9c46a,#e9c46a) bottom right/2px 18px;background-repeat:no-repeat}
+.pick.empty{box-shadow:0 0 0 1px #3c4743;background:rgba(3,8,6,.55);animation:none}
+.pick.empty::after{opacity:.45}
+.pick.empty span{font:400 11px/1.8 var(--wide);letter-spacing:.2em;text-transform:uppercase;color:#7f8c87}
+@keyframes pickIn{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:none}}
+@media (max-width:600px){.picking .slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.picking .card{width:auto}.spot{padding:18px 8px 16px}}
+@media (prefers-reduced-motion:reduce){.pick{animation:none}}
+</style>
+<style>
+/* ===== Review screen: readable tier rows and name chips ===== */
+.review li{align-items:start}
+.review .c{font-family:var(--tech);font-weight:800;letter-spacing:.03em;padding-top:4px}
+.review .tiers{display:grid;gap:7px}
+.review .trow{display:flex;gap:10px;align-items:flex-start}
+.review .tb{flex:none;width:28px;height:28px;display:grid;place-items:center;font:900 14px/1 var(--tech);color:#0b0f0d}
+.review .tb[data-t="S"]{background:var(--metal)}
+.review .tb[data-t="A"]{background:linear-gradient(180deg,#e2fff0,#9df2c2 35%,#55cf90 64%,#237f52 84%,#5fc993)}
+.review .tb[data-t="B"]{background:linear-gradient(180deg,#fff,#e6ece9 35%,#b9c3bf 64%,#7e8a86 84%,#c9d3cf)}
+.review .tb[data-t="C"]{background:linear-gradient(180deg,#ffe6cc,#e7b48a 35%,#c08453 64%,#7a4824 84%,#c98d5e)}
+.review .tb[data-t="D"]{background:linear-gradient(180deg,#e4ebe8,#b0bbb7 35%,#87938f 64%,#4f5a56 84%,#909d98)}
+.review .tn{display:flex;flex-wrap:wrap;gap:6px}
+.review .nm{display:inline-block;padding:5px 10px;border:1px solid #33403b;background:rgba(3,8,6,.6);color:#e8f5ec;font-size:13px;line-height:1.3}
+.review .nm b{color:#e9c46a;margin-right:4px}
+@media (max-width:600px){.review .c{padding-top:0}.review .nm{font-size:12px;padding:4px 8px}}
+</style>
+<style>
+/* ===== Share stories carousel (9:16 slides) ===== */
+.stories{margin:6px 0 18px}
+.stories-k{font:400 10px/1 var(--wide);letter-spacing:.32em;text-transform:uppercase;color:#c9a95a;margin:0 0 12px!important}
+.story-wrap{position:relative;display:flex;align-items:center;gap:6px}
+.story-row{flex:1;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px max(10px,calc(50% - 150px)) 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.story-row::-webkit-scrollbar{display:none}
+.story{flex:none;width:min(300px,72vw);aspect-ratio:9/16;scroll-snap-align:center;background:#06110c;box-shadow:0 0 0 1px #3c4743,0 0 40px -10px rgba(62,224,138,.35),0 30px 50px -20px rgba(0,0,0,.9)}
+.story img{display:block;width:100%;height:100%}
+.story-ph{height:100%;display:grid;place-items:center;font:400 10px/1 var(--wide);letter-spacing:.3em;text-transform:uppercase;color:#5f7468}
+.story-nav{flex:none;width:38px;height:38px;border:1px solid #55625d;background:linear-gradient(180deg,#232a28,#121715);color:#f6e3ad;font-size:22px;line-height:1;cursor:pointer}
+.story-nav:disabled{opacity:.3;cursor:default}
+.story-dots{display:flex;justify-content:center;gap:6px;margin-top:4px;flex-wrap:wrap}
+.story-dots button{width:7px;height:7px;padding:0;border:0;border-radius:50%;background:#33403b;cursor:pointer}
+.story-dots button.on{background:#e9c46a;box-shadow:0 0 8px rgba(233,196,106,.7)}
+@media (max-width:600px){.story-nav{display:none}}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -331,6 +410,7 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
     <div class="me"><span>Voting as <b id="meName"></b></span><button class="btn sm" id="changeName">Change name</button></div>
     <p class="hint" id="hint"></p>
     <div class="board" id="board"></div>
+    <div class="spot" id="spot" hidden></div>
     <div class="pool" id="poolWrap"><h3 id="poolTitle">Nominees</h3><div class="slots" id="pool" data-tier=""></div></div>
     <div class="actions">
       <span class="score" id="progress"></span>
@@ -362,10 +442,18 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
       <p id="doneMsg"></p>
       <p class="lockmsg">Votes can't be changed once submitted. If something is wrong, message the organisers and they can remove your votes so you can vote again.</p>
       <div class="socials" id="doneSocials" style="justify-content:center;margin-bottom:16px"></div>
-      <div id="sharePick" style="margin-bottom:6px"><select id="shareCat" aria-label="Category to share"></select></div>
-      <canvas id="shareCanvas" width="1080" height="1080"></canvas>
+      <div class="stories" id="stories">
+        <p class="stories-k">Your picks, ready for Stories · swipe</p>
+        <div class="story-wrap">
+          <button class="story-nav" id="storyPrev" aria-label="Previous slide">‹</button>
+          <div class="story-row" id="storyRow"></div>
+          <button class="story-nav" id="storyNext" aria-label="Next slide">›</button>
+        </div>
+        <div class="story-dots" id="storyDots"></div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-        <button class="btn primary" id="saveImg">Save this picture</button>
+        <button class="btn primary" id="saveImg">Save this slide</button>
+        <button class="btn" id="saveAll">Save all</button>
         <button class="btn" id="seeResults">See results</button>
       </div>
     </div>
@@ -528,6 +616,24 @@ function cardHTML(n, badge){
     ${n.link ? `<a class="play" href="${esc(n.link)}" target="_blank" rel="noopener" title="Watch / listen">▶</a>` : ''}</div>`;
 }
 
+// Large preview of your pick(s) above the nominees, for the pick-one / pick-several / ranking categories.
+let lastSpot = '';
+function renderSpot(c, d, tier){
+  const spot = $('#spot'); spot.hidden = tier;
+  if (tier){ lastSpot = ''; return; }
+  const picks = c.nominees.filter(n => d[n.id]).sort((a, b) => d[a.id] - d[b.id]);
+  const key = c.id + ':' + picks.map(n => n.id).join(',');
+  if (key === lastSpot) return; lastSpot = key;
+  const big = n => { const u = n.image || covers[n.q]; const meta = String(n.sub || '').split(' · ').filter(Boolean);
+    return `<div class="pick"><div class="art"${u ? ` style="background-image:url('${esc(u)}')"` : ''}>${u ? '' : `<span class="mono">${esc(n.name.split(/\s+/).slice(0, 2).map(w => w[0]).join(''))}</span>`}</div>
+      ${c.method === 'rank' ? `<span class="ord">${d[n.id]}</span>` : ''}
+      <div class="cap"><div class="nm">${esc(n.name)}</div>${meta.map(m => `<div class="mt">${esc(m)}</div>`).join('')}</div></div>`; };
+  spot.className = 'spot ' + (picks.length > 1 ? 'many' : 'one');
+  spot.innerHTML = picks.length
+    ? `<div class="spot-k">${c.method === 'single' ? 'Your pick' : c.method === 'rank' ? 'Your ranking' : 'Your picks'}</div><div class="spot-row">${picks.map(big).join('')}</div>`
+    : `<div class="spot-k">${c.method === 'single' ? 'Your pick' : 'Your picks'}</div><div class="spot-row"><div class="pick empty"><div class="art"><span>Tap a nominee<br>below to choose</span></div></div></div>`;
+}
+
 function render(){
   if (!CATEGORIES.length) return;
   const c = cat(), d = draft();
@@ -566,8 +672,9 @@ function render(){
     // Pick methods: d = {nomineeId: order}; rank shows the order, other methods a check mark.
     $('#pool').innerHTML = c.nominees.map(n => cardHTML(n, d[n.id] ? (c.method === 'rank' ? d[n.id] : '✓') : '')).join('');
     $('#progress').innerHTML = `<b>${placed}</b> of ${picksMax(c)} picked`;
-    $('#hint').innerHTML = c.method === 'rank' ? 'Tap to add in order; tap again to remove.' : 'Tap to pick; tap again to remove.';
+    $('#hint').innerHTML = c.method === 'rank' ? 'Tap to add in order; tap again to remove.' : c.method === 'single' ? 'Tap a nominee to choose it; tap again to remove.' : 'Tap to pick; tap again to remove.';
   }
+  renderSpot(c, d, tier);
   $('#meName').textContent = me ? me.name : '';
   $('#submitBtn').disabled = !CATEGORIES.some(filled);
   $('#nextCat').hidden = CATEGORIES.filter(votable).length < 2;
@@ -670,6 +777,15 @@ function summary(c){
   return c.method === 'rank' ? ns.map((n, i) => `${i + 1}. ${n}`).join(' · ') : ns.join(', ');
 }
 
+// The review screen: one row per tier with a coloured badge, or the picks as name chips.
+function summaryHTML(c){
+  const d = picksOf(c), chip = n => `<span class="nm">${esc(n.name)}</span>`;
+  if (c.method === 'tier') return '<div class="tiers">' + TIERS.map(t => { const ns = c.nominees.filter(n => d[n.id] === t.id);
+    return ns.length ? `<div class="trow"><span class="tb" data-t="${t.id}">${t.id}</span><span class="tn">${ns.map(chip).join('')}</span></div>` : ''; }).join('') + '</div>';
+  const ns = Object.entries(d).sort((a, b) => a[1] - b[1]).map(([id]) => c.nominees.find(n => n.id === id));
+  return '<span class="tn">' + ns.map((n, i) => c.method === 'rank' ? `<span class="nm"><b>${i + 1}</b> ${esc(n.name)}</span>` : chip(n)).join('') + '</span>';
+}
+
 $('#submitBtn').onclick = () => show('review');
 $('#backBtn').onclick = () => show('vote');
 
@@ -700,57 +816,181 @@ $('#confirmBtn').onclick = async () => {
   finally { btn.disabled = false; btn.textContent = 'Submit my votes'; }
 };
 
-/* ===== Share image ===== */
-function drawShare(name, c){
-  const cv = $('#shareCanvas'), x = cv.getContext('2d'), W = 1080, H = 1080, d = picksOf(c);
-  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim();
-  const serif = 'Montserrat,Arial,sans-serif', sans = 'Inter,system-ui,sans-serif';
-  const metal = (y0, y1) => { const m = x.createLinearGradient(0, y0, 0, y1); [['0', '#fff6d6'], ['.38', '#f0d58a'], ['.62', '#c99a3c'], ['.82', '#f3dc9a'], ['1', '#a8761f']].forEach(([o, c]) => m.addColorStop(+o, c)); return m; };
-  const steel = (y0, y1) => { const m = x.createLinearGradient(0, y0, 0, y1); [['0', '#ffffff'], ['.28', '#dfe6e3'], ['.5', '#8d9a95'], ['.56', '#5b6662'], ['.78', '#c9d3cf'], ['1', '#7e8a86']].forEach(([o, c]) => m.addColorStop(+o, c)); return m; };
+/* ===== Share stories: swipeable 1080×1920 slides (Instagram Story / Reel size) ===== */
+const STORY_W = 1080, STORY_H = 1920;
+let STORIES = [];   // [{blob, url, name}]
+const storyImg = (() => { const cache = {}; return u => cache[u] || (cache[u] = new Promise(res => {
+  if (!u) return res(null);
+  const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null);
+  // A fresh copy: the page already shows these posters, and that cached copy isn't allowed into a saved picture.
+  im.src = /^https?:/.test(u) && !u.startsWith(location.origin) ? u + (u.includes('?') ? '&' : '?') + 'story=1' : u;
+})); })();
+function storyBase(x, kicker){
+  const W = STORY_W, H = STORY_H;
   x.fillStyle = '#030806'; x.fillRect(0, 0, W, H);
-  const glow = x.createRadialGradient(W / 2, -60, 0, W / 2, -60, 760); glow.addColorStop(0, 'rgba(40,200,110,.42)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
-  x.fillStyle = glow; x.fillRect(0, 0, W, H);
-  x.strokeStyle = 'rgba(233,196,106,.35)'; x.lineWidth = 2; x.strokeRect(24, 24, W - 48, H - 48);
-  x.textAlign = 'center';
-  x.fillStyle = '#e9c46a'; x.font = `700 20px ${sans}`; x.fillText(EDITION.toUpperCase().split('').join(' '), W / 2, 84, W - 140);
-  x.fillStyle = steel(100, 150); x.font = `900 50px ${serif}`; x.fillText(`${name}'s ${c.method === 'tier' ? 'tier list' : c.method === 'rank' ? 'ranking' : c.method === 'single' ? 'pick' : 'picks'}`.toUpperCase(), W / 2, 146, W - 140);
-  x.fillStyle = 'rgba(232,245,236,.75)'; x.font = `600 24px ${sans}`; x.fillText(c.title, W / 2, 186, W - 140);
-  x.textAlign = 'left';
-  if (c.method !== 'tier'){
-    const picks = Object.entries(d).sort((a, b) => a[1] - b[1]).map(([id]) => c.nominees.find(n => n.id === id)).filter(Boolean);
-    const rowH = Math.min(110, (H - 222 - 104) / Math.max(picks.length, 1));
-    picks.forEach((n, i) => {
-      const y = 222 + i * rowH;
-      x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(60, y, W - 120, rowH - 12);
-      x.fillStyle = i === 0 ? metal(y, y + rowH - 12) : 'rgba(233,196,106,.25)'; x.fillRect(60, y, 90, rowH - 12);
-      x.fillStyle = i === 0 ? '#16120a' : '#e8f5ec'; x.font = `900 40px ${serif}`; x.textAlign = 'center';
-      x.fillText(c.method === 'rank' ? String(i + 1) : '★', 105, y + (rowH - 12) / 2 + 14); x.textAlign = 'left';
-      x.fillStyle = '#e8f5ec'; x.font = `700 32px ${sans}`; x.fillText(n.name, 180, y + (rowH - 12) / 2 + 11, W - 280);
-    });
-    x.textAlign = 'center'; x.fillStyle = 'rgba(232,245,236,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · ' + (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, H - 46); x.textAlign = 'left';
+  let g = x.createRadialGradient(W / 2, 260, 0, W / 2, 260, 1100); g.addColorStop(0, 'rgba(40,200,110,.30)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  g = x.createRadialGradient(W * .15, H * .75, 0, W * .15, H * .75, 700); g.addColorStop(0, 'rgba(40,150,160,.14)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;   // same starfield on every slide
+  for (let i = 0; i < 220; i++){ const m = rnd() ** 3; x.globalAlpha = .25 + m * .7; x.fillStyle = m > .6 ? '#fff4e0' : '#dbe6ff'; x.beginPath(); x.arc(rnd() * W, rnd() * H, .8 + m * 2.4, 0, 6.29); x.fill(); }
+  x.globalAlpha = 1;
+  // gold frame with corner brackets
+  x.strokeStyle = 'rgba(201,154,60,.55)'; x.lineWidth = 2; x.strokeRect(44, 44, W - 88, H - 88);
+  x.fillStyle = '#e9c46a';
+  for (const [cx, cy, sx, sy] of [[44, 44, 1, 1], [W - 44, 44, -1, 1], [44, H - 44, 1, -1], [W - 44, H - 44, -1, -1]]){
+    x.fillRect(cx - (sx < 0 ? 46 : 0), cy - (sy < 0 ? 4 : 0), 46, 4); x.fillRect(cx - (sx < 0 ? 4 : 0), cy - (sy < 0 ? 46 : 0), 4, 46);
+  }
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#e9c46a'; x.font = `400 26px Michroma, Inter, sans-serif`;
+  x.fillText(spaced(kicker || EDITION.toUpperCase()), W / 2, 140, W - 180);
+  x.fillStyle = 'rgba(232,245,236,.55)'; x.font = `600 28px Inter, sans-serif`;
+  x.fillText((location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, H - 96, W - 180);
+}
+const spaced = t => t.split('').join(String.fromCharCode(8202));   // hair spaces: wide lettering without breaking measureText
+function steelFill(x, y0, y1){ const m = x.createLinearGradient(0, y0, 0, y1); [[0, '#ffffff'], [.3, '#dfe6e3'], [.52, '#8d9a95'], [.58, '#5b6662'], [.8, '#c9d3cf'], [1, '#7e8a86']].forEach(([o, c]) => m.addColorStop(o, c)); return m; }
+function goldFill(x, y0, y1){ const m = x.createLinearGradient(0, y0, 0, y1); [[0, '#fff6d6'], [.38, '#f0d58a'], [.62, '#c99a3c'], [.82, '#f3dc9a'], [1, '#a8761f']].forEach(([o, c]) => m.addColorStop(o, c)); return m; }
+// Text that wraps onto several lines, centred; returns the y after the last line.
+function wrapText(x, text, cx, y, maxW, lh, maxLines){
+  const words = String(text).split(/\s+/), lines = []; let line = '';
+  for (const w of words){ const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line){ lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  const shown = lines.slice(0, maxLines || 9);
+  if (lines.length > shown.length) shown[shown.length - 1] += '…';
+  shown.forEach((l, i) => x.fillText(l, cx, y + i * lh));
+  return y + shown.length * lh;
+}
+function drawPoster(x, im, n, px, py, pw, ph){
+  x.save(); x.fillStyle = '#0c1a15'; x.fillRect(px, py, pw, ph);
+  if (im){ const s = Math.max(pw / im.width, ph / im.height), dw = im.width * s, dh = im.height * s;
+    x.beginPath(); x.rect(px, py, pw, ph); x.clip(); x.drawImage(im, px + (pw - dw) / 2, py + (ph - dh) * .3, dw, dh); }
+  else { x.fillStyle = 'rgba(233,196,106,.35)'; x.font = `900 ${Math.round(pw * .32)}px Orbitron, sans-serif`; x.textAlign = 'center';
+    x.fillText(n.name.split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase(), px + pw / 2, py + ph / 2 + pw * .11); }
+  x.restore();
+}
+async function slidePick(x, name, c){
+  const d = picksOf(c), picks = c.nominees.filter(n => d[n.id]).sort((a, b) => d[a.id] - d[b.id]);
+  storyBase(x);
+  const W = STORY_W;
+  x.fillStyle = 'rgba(232,245,236,.7)'; x.font = `400 30px Michroma, Inter, sans-serif`;
+  x.fillText(spaced(c.method === 'single' ? 'MY PICK FOR' : c.method === 'rank' ? 'MY RANKING FOR' : 'MY PICKS FOR'), W / 2, 250);
+  x.fillStyle = steelFill(x, 280, 420); x.font = `900 72px Orbitron, sans-serif`;
+  const yT = wrapText(x, c.title.toUpperCase(), W / 2, 350, W - 200, 84, 3);
+  if (picks.length === 1){
+    const n = picks[0], im = await storyImg(n.image || covers[n.q]);
+    const pw = 660, ph = 880, px = (W - pw) / 2, py = Math.max(yT + 40, 540);
+    const g = x.createRadialGradient(W / 2, py + ph / 2, 0, W / 2, py + ph / 2, 620); g.addColorStop(0, 'rgba(255,150,50,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, py - 200, W, ph + 400);
+    x.fillStyle = '#e9c46a'; x.fillRect(px - 8, py - 8, pw + 16, ph + 16); x.fillStyle = '#030806'; x.fillRect(px - 3, py - 3, pw + 6, ph + 6);
+    drawPoster(x, im, n, px, py, pw, ph);
+    x.fillStyle = '#ffffff'; x.font = `800 64px Inter, sans-serif`;
+    const yN = wrapText(x, n.name, W / 2, py + ph + 110, W - 180, 74, 2);
+    if (n.sub){ x.fillStyle = '#c9d3cf'; x.font = `500 36px Inter, sans-serif`; wrapText(x, n.sub.replace(/ · /g, '  ·  '), W / 2, yN + 6, W - 200, 46, 2); }
     return;
   }
-  const top = 222, rowH = (H - top - 104) / TIERS.length;
-  TIERS.forEach((t, i) => {
-    const y = top + i * rowH;
-    x.fillStyle = t.id === 'S' ? metal(y, y + rowH - 12) : css(t.color); x.fillRect(60, y, 110, rowH - 12);
-    x.fillStyle = '#16120a'; x.font = `900 60px ${serif}`; x.textAlign = 'center'; x.fillText(t.id, 115, y + rowH / 2 + 18); x.textAlign = 'left';
-    x.fillStyle = 'rgba(255,255,255,.05)'; x.fillRect(180, y, W - 240, rowH - 12);
-    x.strokeStyle = 'rgba(255,255,255,.1)'; x.lineWidth = 1; x.strokeRect(180.5, y + .5, W - 241, rowH - 13);
-    const songs = c.nominees.filter(n => d[n.id] === t.id).map(n => n.name);
-    x.fillStyle = '#e8f5ec'; x.font = `700 30px ${sans}`;
-    let line = '', ly = y + 48;
-    songs.forEach((s, j) => {
-      const next = line ? line + '  ·  ' + s : s;
-      if (x.measureText(next).width > W - 280 && line){ x.fillText(line, 205, ly); line = s; ly += 40; } else line = next;
-    });
-    if (line) x.fillText(line, 205, ly);
-  });
-  x.textAlign = 'center'; x.fillStyle = 'rgba(232,245,236,.55)'; x.font = `600 20px ${sans}`; x.fillText('Cast your vote · ' + (location.host + location.pathname).replace(/index\.html$/, '').replace(/\/$/, ''), W / 2, H - 46); x.textAlign = 'left';
+  const cols = picks.length > 4 ? 3 : 2, gap = 34, pw = Math.floor((W - 200 - gap * (cols - 1)) / cols), ph = Math.round(pw * 4 / 3);
+  for (let i = 0; i < picks.length; i++){
+    const n = picks[i], r = Math.floor(i / cols), col = i % cols;
+    const px = 100 + col * (pw + gap), py = Math.max(yT + 40, 520) + r * (ph + 110);
+    drawPoster(x, await storyImg(n.image || covers[n.q]), n, px, py, pw, ph);
+    if (c.method === 'rank'){ x.fillStyle = goldFill(x, py + 14, py + 74); x.fillRect(px + 14, py + 14, 60, 60); x.fillStyle = '#16120a'; x.font = `900 36px Orbitron, sans-serif`; x.textAlign = 'center'; x.fillText(String(i + 1), px + 44, py + 58); }
+    x.fillStyle = '#fff'; x.font = `700 30px Inter, sans-serif`; x.textAlign = 'center'; wrapText(x, n.name, px + pw / 2, py + ph + 44, pw, 36, 2);
+  }
 }
-const shareCat = () => CATEGORIES.find(c => c.id === $('#shareCat').value);
-$('#shareCat').onchange = () => shareCat() && drawShare(final.name, shareCat());
-$('#saveImg').onclick = () => { const a = document.createElement('a'); a.download = `axa-awards-${$('#shareCat').value}.png`; a.href = $('#shareCanvas').toDataURL('image/png'); a.click(); };
+async function slideTier(x, name, c){
+  const d = picksOf(c), W = STORY_W;
+  storyBase(x);
+  x.fillStyle = 'rgba(232,245,236,.7)'; x.font = `400 30px Michroma, Inter, sans-serif`; x.fillText(spaced('MY TIER LIST'), W / 2, 250);
+  x.fillStyle = steelFill(x, 280, 420); x.font = `900 66px Orbitron, sans-serif`;
+  const yT = wrapText(x, c.title.toUpperCase(), W / 2, 340, W - 200, 78, 2);
+  const COL = {S: null, A: ['#e2fff0', '#55cf90', '#237f52'], B: ['#ffffff', '#b9c3bf', '#7e8a86'], C: ['#ffe6cc', '#c08453', '#7a4824'], D: ['#e4ebe8', '#87938f', '#4f5a56']};
+  const top = Math.max(yT + 30, 470), bottom = STORY_H - 170, rowH = (bottom - top) / TIERS.length, bw = 120;
+  for (let i = 0; i < TIERS.length; i++){
+    const t = TIERS[i], y = top + i * rowH, h = rowH - 18;
+    const fill = t.id === 'S' ? goldFill(x, y, y + h) : (() => { const m = x.createLinearGradient(0, y, 0, y + h); m.addColorStop(0, COL[t.id][0]); m.addColorStop(.6, COL[t.id][1]); m.addColorStop(1, COL[t.id][2]); return m; })();
+    x.fillStyle = fill; x.fillRect(90, y, bw, h);
+    x.fillStyle = '#0b0f0d'; x.font = `900 64px Orbitron, sans-serif`; x.textAlign = 'center'; x.fillText(t.id, 90 + bw / 2, y + h / 2 + 22);
+    x.fillStyle = 'rgba(255,255,255,.04)'; x.fillRect(90 + bw + 14, y, W - 180 - bw - 14, h);
+    const ns = c.nominees.filter(n => d[n.id] === t.id); if (!ns.length) continue;
+    const areaW = W - 180 - bw - 14 - 24, gap = 14, labelH = 52;
+    const th = h - 24 - labelH, tw0 = Math.round(th * 3 / 4), tw = Math.min(tw0, Math.floor((areaW - gap * (ns.length - 1)) / ns.length));
+    const tth = Math.round(tw * 4 / 3), x0 = 90 + bw + 14 + 12;
+    for (let j = 0; j < ns.length; j++){
+      const n = ns[j], px = x0 + j * (tw + gap), py = y + 12;
+      drawPoster(x, await storyImg(n.image || covers[n.q]), n, px, py, tw, tth);
+      x.fillStyle = '#e8f5ec'; x.font = `600 ${tw > 120 ? 20 : 16}px Inter, sans-serif`; x.textAlign = 'center';
+      wrapText(x, n.name, px + tw / 2, py + tth + 24, tw + gap - 4, tw > 120 ? 22 : 18, 2);
+    }
+  }
+}
+function slideCover(x, name, count, noRing){
+  storyBase(x); const W = STORY_W, H = STORY_H;
+  const ring = !noRing && document.querySelector('.hero') && getComputedStyle(document.querySelector('.hero'), '::before').backgroundImage.match(/url\("?(.*?)"?\)$/);
+  return (ring ? storyImg(ring[1]) : Promise.resolve(null)).then(im => {
+    const g = x.createRadialGradient(W / 2, H * .44, 0, W / 2, H * .44, 520); g.addColorStop(0, 'rgba(255,150,50,.22)'); g.addColorStop(.5, 'rgba(62,224,138,.12)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    if (im){ x.globalAlpha = .9; x.drawImage(im, W / 2 - 430, H * .44 - 430, 860, 860); x.globalAlpha = 1; }
+    x.textAlign = 'center';
+    x.fillStyle = goldFill(x, H * .36, H * .4); x.font = `400 40px Michroma, Inter, sans-serif`; x.fillText(spaced((name + "'S").toUpperCase()), W / 2, H * .39, W - 260);
+    x.fillStyle = steelFill(x, H * .41, H * .48); x.font = `900 150px Orbitron, sans-serif`; x.fillText('2026', W / 2, H * .47);
+    x.fillStyle = steelFill(x, H * .48, H * .52); x.font = `900 92px Orbitron, sans-serif`; x.fillText('PICKS', W / 2, H * .525);
+    x.fillStyle = '#c9d3cf'; x.font = `500 38px Inter, sans-serif`; x.fillText(`${count} ${count === 1 ? 'category' : 'categories'} voted`, W / 2, H * .7);
+    x.fillStyle = 'rgba(233,196,106,.85)'; x.font = `400 26px Michroma, Inter, sans-serif`; x.fillText(spaced('SWIPE FOR MY PICKS'), W / 2, H * .74);
+  });
+}
+function slideOutro(x){
+  storyBase(x); const W = STORY_W, H = STORY_H;
+  return storyImg(new URL('../img/favicon-192.png', location.href).href).then(im => {
+    if (im){ x.save(); x.beginPath(); x.arc(W / 2, H * .34, 150, 0, 6.29); x.clip(); x.drawImage(im, W / 2 - 150, H * .34 - 150, 300, 300); x.restore();
+      x.strokeStyle = '#e9c46a'; x.lineWidth = 6; x.beginPath(); x.arc(W / 2, H * .34, 156, 0, 6.29); x.stroke(); }
+    x.textAlign = 'center';
+    x.fillStyle = steelFill(x, H * .46, H * .53); x.font = `900 84px Orbitron, sans-serif`; x.fillText("THAT'S MY", W / 2, H * .5); x.fillText('BALLOT!', W / 2, H * .555);
+    const closes = SETTINGS.voting_closes ? new Date(SETTINGS.voting_closes) : null, night = SETTINGS.date ? new Date(SETTINGS.date) : null;
+    const fmt = dt => dt.toLocaleString(undefined, {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
+    x.fillStyle = '#e9c46a'; x.font = `400 30px Michroma, Inter, sans-serif`; x.fillText(spaced('CAST YOUR VOTE'), W / 2, H * .64);
+    x.fillStyle = '#e8f5ec'; x.font = `600 40px Inter, sans-serif`;
+    if (closes && !isNaN(closes)) x.fillText(`Voting closes ${fmt(closes)}`, W / 2, H * .68);
+    if (night && !isNaN(night)) x.fillText(`Awards night ${fmt(night)}`, W / 2, H * .715);
+  });
+}
+async function buildStories(name, mine){
+  await (document.fonts ? document.fonts.ready : Promise.resolve());
+  STORIES.forEach(s => URL.revokeObjectURL(s.url)); STORIES = [];
+  const cv = document.createElement('canvas'); cv.width = STORY_W; cv.height = STORY_H; const x = cv.getContext('2d');
+  const jobs = [['cover', () => slideCover(x, name, mine.length)], ...mine.map(c => [c.id, () => c.method === 'tier' ? slideTier(x, name, c) : slidePick(x, name, c)]), ['ballot', () => slideOutro(x)]];
+  const row = $('#storyRow'); row.innerHTML = jobs.map((j, i) => `<div class="story" data-i="${i}"><div class="story-ph">Preparing…</div></div>`).join('');
+  $('#storyDots').innerHTML = jobs.map((j, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
+  for (let i = 0; i < jobs.length; i++){
+    x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.textAlign = 'center';
+    await jobs[i][1]();
+    let blob;
+    try { blob = await new Promise((r, f) => { try { cv.toBlob(r, 'image/png'); } catch (e){ f(e); } }); }
+    catch (e){ if (i) throw e; await slideCover(x, name, mine.length, true); blob = await new Promise(r => cv.toBlob(r, 'image/png')); }   // a browser that won't export the rune ring gets a cover without it
+    const url = URL.createObjectURL(blob), file = `axa-awards-2026-${String(i + 1).padStart(2, '0')}-${jobs[i][0]}.png`;
+    STORIES[i] = {blob, url, name: file};
+    row.children[i].innerHTML = `<img src="${url}" alt="Slide ${i + 1}">`;
+  }
+  storyIndex();
+}
+function storyIndex(){
+  const row = $('#storyRow'), w = row.firstElementChild ? row.firstElementChild.getBoundingClientRect().width + 14 : 1;
+  const i = Math.max(0, Math.min(STORIES.length - 1, Math.round(row.scrollLeft / w)));
+  [...$('#storyDots').children].forEach((b, j) => b.classList.toggle('on', j === i));
+  $('#storyPrev').disabled = i === 0; $('#storyNext').disabled = i >= $('#storyRow').children.length - 1;
+  return i;
+}
+function storyGo(i){ const row = $('#storyRow'), el = row.children[i]; if (el) row.scrollTo({left: el.offsetLeft - row.offsetLeft - (row.clientWidth - el.clientWidth) / 2, behavior: 'smooth'}); }
+async function storySave(list){
+  const files = list.filter(Boolean).map(s => new File([s.blob], s.name, {type: 'image/png'}));
+  if (!files.length) return;
+  // Phones: the share sheet (Save Image, Instagram, Facebook, Messenger…). Computers: download.
+  if (navigator.canShare && navigator.canShare({files}) && matchMedia('(pointer: coarse)').matches){
+    try { await navigator.share({files}); return; } catch (e){ if (e.name === 'AbortError') return; }
+  }
+  for (const f of files){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); await new Promise(r => setTimeout(r, 350)); }
+}
+$('#storyRow').addEventListener('scroll', () => { clearTimeout(storyIndex.t); storyIndex.t = setTimeout(storyIndex, 60); }, {passive: true});
+$('#storyDots').addEventListener('click', e => { const b = e.target.closest('button'); if (b) storyGo(+b.dataset.i); });
+$('#storyPrev').onclick = () => storyGo(storyIndex() - 1);
+$('#storyNext').onclick = () => storyGo(storyIndex() + 1);
+$('#saveImg').onclick = () => storySave([STORIES[storyIndex()]]);
+$('#saveAll').onclick = () => storySave(STORIES);
 // Next category that has nominees, going round.
 $('#nextCat').onclick = () => {
   for (let k = 1; k <= CATEGORIES.length; k++){ const i = (catIdx + k) % CATEGORIES.length; if (votable(CATEGORIES[i])){ catIdx = i; break; } }
@@ -843,17 +1083,15 @@ function show(v){
       $('#catTitle').textContent = 'Almost done';
       const skipped = CATEGORIES.filter(c => votable(c) && !filled(c)).length;
       $('#reviewMsg').innerHTML = `Voting as <b>${esc(me.name)}</b>.` + (skipped ? ` You skipped ${skipped} categor${skipped === 1 ? 'y' : 'ies'}, and won't be able to vote in ${skipped === 1 ? 'it' : 'them'} later.` : '');
-      $('#reviewList').innerHTML = CATEGORIES.filter(votable).map(c => `<li><span class="c">${esc(c.title)}</span>${filled(c) ? `<span class="v">${esc(summary(c))}</span>` : '<span class="skip">Skipped</span>'}</li>`).join('');
+      $('#reviewList').innerHTML = CATEGORIES.filter(votable).map(c => `<li><span class="c">${esc(c.title)}</span>${filled(c) ? `<span class="v">${summaryHTML(c)}</span>` : '<span class="skip">Skipped</span>'}</li>`).join('');
     }
     if (v === 'done'){
       $('#catTitle').textContent = 'Thank you!';
       $('#doneMsg').textContent = `Thanks ${final.name}! Your votes are in.`;
       $('#doneSocials').innerHTML = socialsHTML();
       const mine = CATEGORIES.filter(c => final.cats.includes(c.id) && Object.keys(picksOf(c)).length);
-      $('#shareCat').innerHTML = mine.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
-      $('#sharePick').hidden = mine.length < 2;
-      $('#shareCanvas').hidden = $('#saveImg').hidden = !mine.length;
-      if (mine.length) drawShare(final.name, mine[0]);
+      $('#stories').hidden = $('#saveImg').hidden = $('#saveAll').hidden = !mine.length;
+      if (mine.length) buildStories(final.name, mine);
     }
   }
   window.scrollTo({top:0, behavior:'smooth'});
