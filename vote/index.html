@@ -374,6 +374,16 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
 .story-dots button.on{background:#e9c46a;box-shadow:0 0 8px rgba(233,196,106,.7)}
 @media (max-width:600px){.story-nav{display:none}}
 </style>
+<style>
+/* Optional Discord sign-in on the name screen */
+.dc{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;text-align:left}
+.dc .note{font-size:12px;color:#8fa69a;flex-basis:100%;text-align:center}
+.dc-btn{background:#5865f2!important;border-color:#5865f2!important;color:#fff!important;gap:10px}
+.dc-btn:hover{background:#4752c4!important}
+.dc-btn svg{width:20px;height:20px}
+.dc-av{width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;box-shadow:0 0 0 2px #e9c46a}
+.dc span{color:#c9d3cf;font-size:13px}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -395,6 +405,7 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
     <div class="panel start">
       <h2>Before you vote</h2>
       <p>Enter your name. It's used for every category, and each name can vote only once. You'll vote in every category, then submit them all together.</p>
+      <div class="dc" id="dcBox" hidden></div>
       <div class="voter">
         <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
         <label id="codeField">Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
@@ -675,7 +686,7 @@ function render(){
     $('#hint').innerHTML = c.method === 'rank' ? 'Tap to add in order; tap again to remove.' : c.method === 'single' ? 'Tap a nominee to choose it; tap again to remove.' : 'Tap to pick; tap again to remove.';
   }
   renderSpot(c, d, tier);
-  $('#meName').textContent = me ? me.name : '';
+  $('#meName').innerHTML = (dcInfo() ? `<img class="dc-av" src="${esc(dcInfo().a)}" alt="">` : '') + esc(me ? me.name : '');
   $('#submitBtn').disabled = !CATEGORIES.some(filled);
   $('#nextCat').hidden = CATEGORIES.filter(votable).length < 2;
 }
@@ -800,7 +811,7 @@ $('#confirmBtn').onclick = async () => {
   const btn = $('#confirmBtn'); btn.disabled = true; btn.textContent = 'Submitting…';
   try {
     if (live){
-      const r = await api({action:'ballot', voter:me.name, code:me.code, ballots});
+      const r = await api({action:'ballot', voter:me.name, code:me.code, dc:dcPass() || undefined, ballots});
       if (!r.ok){
         if (r.taken){ me = null; LS.set('aw.voter2', null); show('name'); $('#nameErr').textContent = NAME_TAKEN; $('#nameErr').hidden = false; return; }
         throw new Error(r.error || 'Submission failed');
@@ -815,6 +826,53 @@ $('#confirmBtn').onclick = async () => {
   } catch (e){ toast(offline(e) ? 'Couldn\'t reach the ballot box. Your votes are still here; try again.' : e.message); }
   finally { btn.disabled = false; btn.textContent = 'Submit my votes'; }
 };
+
+/* ===== Optional "Sign in with Discord" =====
+   Signing in pre-fills the name (which stays editable) and shows the voter's own Discord picture. The ballot then
+   carries a signed pass, so the voting script records a scrambled form of the account. Voting without Discord works
+   as before. The button only appears once a Discord Client ID is set in the admin dashboard's Settings. */
+const b64u = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4))));
+const dcStore = {get: k => { try { return sessionStorage.getItem(k); } catch (e){ return null; } },
+  set: (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (e){} }};
+function dcPass(){ const p = dcStore.get('aw.dc'); return p && dcInfo() ? p : ''; }
+function dcInfo(){
+  const p = dcStore.get('aw.dc'); if (!p) return null;
+  try { const o = JSON.parse(unb64u(p.split('.')[0])); if (o.x > Date.now()) return o; } catch (e){}
+  dcStore.set('aw.dc', null); return null;
+}
+// Coming back from Discord: #dc=<pass>&n=<nonce>. Only accepted if the nonce matches the one this tab sent.
+(function(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.get('dc')) return;
+  if (h.get('n') && h.get('n') === dcStore.get('aw.dcnonce')) dcStore.set('aw.dc', h.get('dc'));
+  dcStore.set('aw.dcnonce', null);
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+function renderDc(){
+  const box = $('#dcBox'), id = String(SETTINGS.discord_client_id || '').trim();
+  const info = dcInfo();
+  box.hidden = !id && !info;
+  if (box.hidden) return;
+  if (info){
+    box.innerHTML = `<img class="dc-av" src="${esc(info.a)}" alt=""><span>Signed in with Discord as <b>${esc(info.n)}</b>. You can still change the name below.</span>
+      <button class="btn sm" id="dcOut">Sign out</button>`;
+    if (!$('#voterName').value.trim()) $('#voterName').value = info.n;
+  } else {
+    box.innerHTML = `<button class="btn dc-btn" id="dcIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.4 18.4 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.4C.6 9 -.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.8-3.6-13.7ZM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>Sign in with Discord</button>
+      <span class="note">Optional. Shows your Discord picture; you can still change your name.</span>`;
+  }
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#dcOut')){ dcStore.set('aw.dc', null); renderDc(); return; }
+  if (!e.target.closest('#dcIn')) return;
+  const id = String(SETTINGS.discord_client_id || '').trim(), guild = String(SETTINGS.discord_guild_id || '').trim();
+  const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  dcStore.set('aw.dcnonce', nonce);
+  const q = new URLSearchParams({client_id: id, response_type: 'code', redirect_uri: APPS_SCRIPT_URL, prompt: 'none',
+    scope: guild ? 'identify guilds.members.read' : 'identify', state: b64u(JSON.stringify({r: location.href.split('#')[0], u: APPS_SCRIPT_URL, n: nonce}))});
+  location.href = 'https://discord.com/oauth2/authorize?' + q;
+});
 
 /* ===== Share stories: swipeable 1080×1920 slides (Instagram Story / Reel size) ===== */
 const STORY_W = 1080, STORY_H = 1920;
@@ -935,20 +993,15 @@ function slideCover(x, name, count, noRing){
   });
 }
 function slideOutro(x){
+  // Closing slide: just the AxA logo, centred (no slogan or dates).
   storyBase(x); const W = STORY_W, H = STORY_H;
   return storyImg(new URL('../img/favicon-192.png', location.href).href).then(im => {
-    if (im){ x.save(); x.beginPath(); x.arc(W / 2, H * .34, 150, 0, 6.29); x.clip(); x.drawImage(im, W / 2 - 150, H * .34 - 150, 300, 300); x.restore();
-      x.strokeStyle = '#e9c46a'; x.lineWidth = 6; x.beginPath(); x.arc(W / 2, H * .34, 156, 0, 6.29); x.stroke(); }
-    x.textAlign = 'center';
-    x.fillStyle = steelFill(x, H * .46, H * .53); x.font = `900 84px Orbitron, sans-serif`; x.fillText("THAT'S MY", W / 2, H * .5); x.fillText('BALLOT!', W / 2, H * .555);
-    const closes = SETTINGS.voting_closes ? new Date(SETTINGS.voting_closes) : null, night = SETTINGS.date ? new Date(SETTINGS.date) : null;
-    const fmt = dt => dt.toLocaleString(undefined, {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'});
-    x.fillStyle = '#e9c46a'; x.font = `400 30px Michroma, Inter, sans-serif`; x.fillText(spaced('CAST YOUR VOTE'), W / 2, H * .64);
-    x.fillStyle = '#e8f5ec'; x.font = `600 40px Inter, sans-serif`;
-    if (closes && !isNaN(closes)) x.fillText(`Voting closes ${fmt(closes)}`, W / 2, H * .68);
-    if (night && !isNaN(night)) x.fillText(`Awards night ${fmt(night)}`, W / 2, H * .715);
+    const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 520); g.addColorStop(0, 'rgba(255,150,50,.18)'); g.addColorStop(.5, 'rgba(62,224,138,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+    if (im){ x.save(); x.beginPath(); x.arc(W / 2, H / 2, 210, 0, 6.29); x.clip(); x.drawImage(im, W / 2 - 210, H / 2 - 210, 420, 420); x.restore();
+      x.strokeStyle = '#e9c46a'; x.lineWidth = 7; x.beginPath(); x.arc(W / 2, H / 2, 217, 0, 6.29); x.stroke(); }
   });
 }
+
 async function buildStories(name, mine){
   await (document.fonts ? document.fonts.ready : Promise.resolve());
   STORIES.forEach(s => URL.revokeObjectURL(s.url)); STORIES = [];
@@ -1077,6 +1130,7 @@ function show(v){
     if (v === 'name'){
       $('#catTitle').textContent = 'Cast your vote';
       if (me) $('#voterName').value = me.name;
+      renderDc();
       $('#nameErr').hidden = true;
     }
     if (v === 'review'){

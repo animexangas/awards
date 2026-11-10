@@ -80,7 +80,7 @@ select.no{border-color:#e3e1e8;color:var(--muted)}
 </head>
 <body>
 <header><h1>Awards Admin</h1><div class="row"><span class="me" id="me"></span><a id="committeeLink" href="#" style="color:#e9c46a;font-size:12px">Committee page</a><button class="primary" id="publish">Publish to site</button></div></header>
-<nav id="tabs"><button data-tab="proposals">Proposals</button><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
+<nav id="tabs"><button data-tab="proposals">Proposals</button><button data-tab="categories" class="on">Categories</button><button data-tab="results">Results</button><button data-tab="check">Data check</button><button data-tab="settings">Settings</button><button data-tab="activity">Activity</button></nav>
 <div class="status" id="status"></div>
 <main id="main"><div id="loading">Loading…</div></main>
 <div id="toast"></div>
@@ -225,6 +225,23 @@ function renderResults(){
   }).join('');
 }
 
+/* ===== Data check ===== */
+// Flags ballots that look like duplicates or trolling. Nothing is removed until someone presses Remove.
+function renderDataCheck(){
+  const d = STATE.dataCheck;
+  const intro = `<div class="row" style="margin-bottom:12px"><button id="runcheck">${d ? 'Check again' : 'Run the check'}</button>
+    <span class="note" style="margin:0">Looks for look-alike names, one Discord account under several names, bursts of ballots, identical ballots and junk names. Nothing is removed automatically.</span></div>`;
+  if (!d) return intro;
+  const when = new Date(d.checked).toLocaleString();
+  if (!d.flagged.length) return intro + `<p class="note">Checked ${esc(when)}: all ${d.ballots} ballots look fine.</p>`;
+  return intro + `<p class="note">Checked ${esc(when)}: ${d.flagged.length} of ${d.ballots} ballots flagged. Removing a ballot deletes all its votes and frees the name.</p>
+    <div class="card"><div class="body" style="border:0"><table><tr><th>Voter</th><th>When</th><th>Why it was flagged</th><th></th></tr>${d.flagged.map(b =>
+      `<tr><td><b>${esc(b.voter)}</b>${b.discord ? ' <span class="meta">(Discord)</span>' : ''}<div class="meta">${b.categories} categories</div></td>
+       <td class="meta">${esc(b.at ? new Date(b.at).toLocaleString() : '')}</td>
+       <td>${b.flags.map(f => `<div class="meta">• ${esc(f)}</div>`).join('')}</td>
+       <td class="num"><button class="icon danger" data-rmballot="${esc(b.key)}" data-name="${esc(b.voter)}">Remove</button></td></tr>`).join('')}</table></div></div>`;
+}
+
 /* ===== Settings ===== */
 const SETTING_GROUPS = [
   ['Event', '', [['title', 'Event title', 'text'], ['tagline', 'Tagline', 'text'], ['date', 'Ceremony date and time', 'datetime-local'],
@@ -233,6 +250,8 @@ const SETTING_GROUPS = [
     ['voting_closes', 'Voting ends (optional)', 'datetime-local'], ['reveal_winners', 'Reveal winners on the site', 'bool'],
     ['show_results', 'Show points on the site', 'bool']]],
   ['Social links', '', [['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']]],
+  ['Discord sign-in (optional)', '', [['discord_client_id', 'Discord application Client ID (blank = no Discord button)', 'text'],
+    ['discord_guild_id', 'AxA server ID (blank = any Discord account)', 'text']]],
   ['Votes data', 'voting', [['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text']]]];
 function settingField([k, label, type]){
   const s = STATE.settings;
@@ -291,7 +310,7 @@ function render(){
   $('#publish').title = STATE.unpublished ? 'Changes since the last publish are not on the website yet' : 'The website is up to date';
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === TAB));
   $('[data-tab=proposals]').textContent = STATE.proposals.length ? `Proposals (${STATE.proposals.length})` : 'Proposals';
-  $('#main').innerHTML = {proposals:renderProposals, categories:renderCategories, results:renderResults, settings:renderSettings, activity:renderActivity}[TAB]();
+  $('#main').innerHTML = {proposals:renderProposals, categories:renderCategories, results:renderResults, check:renderDataCheck, settings:renderSettings, activity:renderActivity}[TAB]();
   document.querySelectorAll('.catform').forEach(f => {
     syncForm(f);
     const c = STATE.categories.find(x => x.id === f.dataset.id);
@@ -336,6 +355,8 @@ document.addEventListener('submit', e => {
 document.addEventListener('click', e => {
   const t = e.target.closest('button,[data-open],.pill[data-tab]'); if (!t) return;
   if (t.dataset.tab){ TAB = t.dataset.tab; render(); return; }
+  if (t.id === 'runcheck'){ call('adminDataCheck').then(s => s && toast(s.dataCheck.flagged.length ? s.dataCheck.flagged.length + ' ballots to look at' : 'All ballots look fine')); return; }
+  if (t.dataset.rmballot){ if (confirm('Remove the ballot from "' + t.dataset.name + '"? All of its votes are deleted. This cannot be undone.')) call('adminRemoveBallot', t.dataset.rmballot).then(s => s && toast('Ballot removed')); return; }
   if (t.id === 'posters'){ call('adminFillPosters').then(s => s && toast(s.message)); return; }
   if (t.id === 'addcat'){ $('#newcat').innerHTML = `<div class="card"><div class="body" style="border:0">${categoryForm()}</div></div>`; syncForm($('#newcat form')); return; }
   if ('cancel' in t.dataset){ $('#newcat').innerHTML = ''; return; }

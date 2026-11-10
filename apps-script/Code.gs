@@ -243,6 +243,7 @@ function doGet(e) {
       .setTitle(p.page === 'admin' ? 'Awards Admin' : 'Awards Committee')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
+  if (p.state && (p.code || p.error)) return discordCallback(p);   // coming back from "Sign in with Discord"
   if (p.action === 'results') {
     if (!SHOW_RESULTS) return json({ok: false, error: 'Results will be revealed at the awards'});
     return json({ok: true, results: tally(p.category)});
@@ -341,7 +342,13 @@ const NAME_TAKEN = 'This name has already voted. Votes can\'t be changed. If thi
 // name's rows in the Votes tab, which frees the name.
 function recordBallot(b) {
   const voter = cleanVoter(b.voter);
-  const code = String(b.code || '').trim().toUpperCase().slice(0, 20);
+  let code = String(b.code || '').trim().toUpperCase().slice(0, 20);
+  // Signed in with Discord: record a scrambled form of the account (the voter still chooses the name shown).
+  if (b.dc) {
+    const pass = readPass(b.dc);
+    if (!pass) return {ok: false, error: 'Your Discord sign-in has expired. Sign in again, or vote without Discord.'};
+    code = 'DC-' + pass.h;
+  }
   const items = Array.isArray(b.ballots) ? b.ballots.slice(0, 50) : [];
   if (!voter) return {ok: false, error: 'Please enter your name'};
   if (settingsMap().vote_open === 'FALSE') return {ok: false, error: 'Voting is closed'};
@@ -372,7 +379,7 @@ function recordBallot(b) {
 
   // Voter codes: if the Codes sheet lists any, a valid code that hasn't voted yet is required.
   const codeRows = sheet('Codes').getDataRange().getValues().slice(1);
-  if (codeRows.length) {
+  if (codeRows.length && !/^DC-/.test(code)) {
     const mine = codeRows.filter(r => String(r[0]).toUpperCase() === code);
     if (!code || !mine.some(r => !r[1])) return {ok: false, error: 'Unknown voter code'};
     if (mine.some(r => r[1])) return {ok: false, error: 'This code has already voted'};
@@ -867,4 +874,174 @@ function adminDecideProposal(id, decision) {
     log(email, decision + ' proposal', p.kind + ': ' + p.title);
     return adminState();
   });
+}
+
+/* ===== Data check: flag suspicious ballots for the daily clean-up ===== */
+
+// Rude words (English and Filipino) that mark a voter name as junk. Matched inside the simplified name.
+const JUNK_WORDS = ['fuck', 'shit', 'bitch', 'cunt', 'dick', 'pussy', 'asshole', 'nigga', 'nigger', 'puta', 'putang', 'tangina',
+  'gago', 'tanga', 'bobo', 'ulol', 'pakyu', 'kantot', 'burat', 'titi', 'pepe'];
+
+// A name boiled down for comparison: lower case, letters only, common number-for-letter swaps undone.
+function simpleName(name) {
+  return cleanVoter(name).toLowerCase()
+    .replace(/0/g, 'o').replace(/[@4]/g, 'a').replace(/3/g, 'e').replace(/[1!|]/g, 'i').replace(/[5$]/g, 's').replace(/7/g, 't')
+    .replace(/[^a-z]/g, '');
+}
+
+// Every ballot (all rows from one voter name) with the reasons it looks suspicious. Nothing is removed here.
+function dataCheck() {
+  const byKey = {};
+  readVotes().forEach(v => {
+    const key = cleanVoter(v.voter).toLowerCase(); if (!key) return;
+    const b = byKey[key] || (byKey[key] = {key: key, voter: cleanVoter(v.voter), code: v.code, at: v.timestamp, picks: [], cats: {}});
+    if (v.timestamp && (!b.at || v.timestamp < b.at)) b.at = v.timestamp;
+    if (v.code && !b.code) b.code = v.code;
+    b.picks.push(v.category + ':' + v.nominee + '=' + v.value); b.cats[v.category] = true;
+  });
+  const list = Object.keys(byKey).map(k => byKey[k]);
+  list.forEach(b => { b.flags = []; b.sig = b.picks.sort().join('|'); b.ncats = Object.keys(b.cats).length; b.time = new Date(b.at).getTime() || 0; });
+  const group = fn => { const g = {}; list.forEach(b => { const k = fn(b); if (k) (g[k] = g[k] || []).push(b); });
+    return Object.keys(g).map(k => g[k]).filter(x => x.length >= 2); };
+  const others = (b, set) => set.filter(x => x !== b).map(x => x.voter).join(', ');
+  group(b => simpleName(b.voter)).forEach(set => set.forEach(b => b.flags.push('Look-alike name: ' + others(b, set))));
+  group(b => /^DC-/.test(b.code) ? b.code : '').forEach(set => set.forEach(b => b.flags.push('Same Discord account as: ' + others(b, set))));
+  group(b => b.ncats >= 3 ? b.sig : '').forEach(set => set.forEach(b => b.flags.push('Identical choices to: ' + others(b, set))));
+  const sorted = list.slice().sort((a, b) => a.time - b.time);
+  sorted.forEach(b => {
+    const near = sorted.filter(x => x !== b && x.time && Math.abs(x.time - b.time) <= 120000);
+    if (b.time && near.length >= 2) b.flags.push((near.length + 1) + ' ballots within 2 minutes: ' + near.map(x => x.voter).join(', '));
+  });
+  list.forEach(b => {
+    const s = simpleName(b.voter), raw = b.voter;
+    const junk = raw.length < 3 ? 'very short' : !/[a-z]/i.test(raw) ? 'no letters' : /(.)\1{3,}/i.test(raw) ? 'repeated characters'
+      : /^[^aeiouy]{5,}$/.test(s) ? 'looks like keyboard mashing' : JUNK_WORDS.some(w => s.indexOf(w) >= 0) ? 'rude word' : '';
+    if (junk) b.flags.push('Junk name: ' + junk);
+  });
+  return {
+    checked: new Date().toISOString(),
+    ballots: list.length,
+    flagged: list.filter(b => b.flags.length).sort((a, b) => b.time - a.time)
+      .map(b => ({key: b.key, voter: b.voter, discord: /^DC-/.test(b.code), at: b.at, categories: b.ncats, flags: b.flags}))
+  };
+}
+
+function adminDataCheck() {
+  requireCommittee();
+  return Object.assign(adminState(), {dataCheck: dataCheck()});
+}
+
+// Removes every vote row of one ballot (matched by voter name, ignoring capitals and spaces), frees a voter code it
+// used, and logs who removed it. The name can then vote again.
+function adminRemoveBallot(key) {
+  const email = requireCommittee();
+  key = cleanVoter(key).toLowerCase();
+  if (!key) throw new Error('No ballot chosen');
+  return withLock(() => {
+    const src = votesSource(), col = src.head.indexOf(src.map.voter);
+    if (col < 0) throw new Error('The votes sheet has no voter column');
+    const values = src.sheet.getDataRange().getValues();
+    const rows = [];
+    for (let i = values.length - 1; i >= 1; i--) if (cleanVoter(String(values[i][col]).replace(/^'/, '')).toLowerCase() === key) rows.push(i + 1);
+    if (!rows.length) throw new Error('That ballot was not found (it may already be removed)');
+    rows.forEach(r => src.sheet.deleteRow(r));   // bottom to top, so row numbers stay valid
+    CACHE.votes = null;
+    const codes = sheet('Codes'), cv = codes.getDataRange().getValues();
+    for (let i = cv.length - 1; i >= 1; i--) if (cleanVoter(cv[i][2]).toLowerCase() === key) codes.deleteRow(i + 1);
+    forget('Codes');
+    log(email, 'remove ballot', key + ' (' + rows.length + ' vote rows)');
+    return Object.assign(adminState(), {dataCheck: dataCheck()});
+  });
+}
+
+/* ===== Optional "Sign in with Discord" =====
+ * Setup: create an application at discord.com/developers, add the PUBLIC web app's /exec address as an OAuth2
+ * redirect, put its Client ID (and optionally the AxA server ID) in Settings, and its Client Secret in
+ * Project Settings → Script properties as DISCORD_CLIENT_SECRET. Voters who sign in get a signed pass; their ballot
+ * then records a scrambled form of their Discord ID (never the ID itself), so one account can be spotted voting
+ * under two names. Signing in is optional; voting without Discord works as before. */
+
+function passSecret() {
+  const props = PropertiesService.getScriptProperties();
+  let s = props.getProperty('PASS_SECRET');
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); props.setProperty('PASS_SECRET', s); }
+  return s;
+}
+function b64url(bytes) {
+  return Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, '');
+}
+function signPass(obj) {
+  const body = b64url(Utilities.newBlob(JSON.stringify(obj)).getBytes());
+  return body + '.' + b64url(Utilities.computeHmacSha256Signature(body, passSecret()));
+}
+function readPass(pass) {
+  const parts = String(pass || '').split('.');
+  if (parts.length !== 2 || b64url(Utilities.computeHmacSha256Signature(parts[0], passSecret())) !== parts[1]) return null;
+  try {
+    const pad = parts[0] + '==='.slice((parts[0].length + 3) % 4);
+    const o = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(pad)).getDataAsString());
+    return o && o.x > Date.now() ? o : null;
+  } catch (err) {
+    return null;
+  }
+}
+function scrambledId(id) {
+  return b64url(Utilities.computeHmacSha256Signature('discord:' + id, passSecret())).slice(0, 16).toUpperCase();
+}
+
+// Only send voters back to our own ballot pages.
+function safeReturn(url) {
+  url = String(url || '');
+  const ok = /^https:\/\/(benburnsred|animexangas)\.github\.io\/awards\/vote\//.test(url) || /^http:\/\/localhost(:\d+)?\//.test(url);
+  return ok ? url.split('#')[0] : '';
+}
+
+function discordPage(title, text, link, linkText) {
+  const t = HtmlService.createTemplate(
+    '<div style="font-family:system-ui,sans-serif;background:#030806;color:#e8f5ec;min-height:100vh;margin:0;display:grid;place-items:center;text-align:center;padding:24px">' +
+    '<div><h2 style="color:#e9c46a;font-weight:600"><?= title ?></h2><p style="color:#a9bcb2;max-width:420px"><?= text ?></p>' +
+    '<? if (link) { ?><p><a href="<?= link ?>" target="_top" style="display:inline-block;padding:12px 22px;border:1px solid #c99a3c;color:#f6e3ad;text-decoration:none">' +
+    '<?= linkText ?></a></p><script>try { window.top.location.href = <?!= JSON.stringify(link) ?>; } catch (e) {}</script><? } ?></div></div>');
+  t.title = title; t.text = text; t.link = link || ''; t.linkText = linkText || '';
+  return t.evaluate().setTitle('Anime X Angas Awards').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// Discord sends the voter back here with ?code=…&state=… (state carries the ballot address and a one-time nonce).
+function discordCallback(p) {
+  let st = {};
+  try {
+    const raw = String(p.state || ''), pad = raw + '==='.slice((raw.length + 3) % 4);
+    st = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(pad)).getDataAsString());
+  } catch (err) {}
+  const back = safeReturn(st.r);
+  if (!back) return discordPage('Sign-in link not recognised', 'Please go back to the ballot and try again.');
+  const s = settingsMap(), clientId = String(s.discord_client_id || '').trim(), guild = String(s.discord_guild_id || '').trim();
+  const secret = PropertiesService.getScriptProperties().getProperty('DISCORD_CLIENT_SECRET');
+  if (p.error || !p.code) return discordPage('Discord sign-in cancelled', 'No problem: you can still vote without Discord.', back, 'Back to the ballot');
+  if (!clientId || !secret) return discordPage('Discord sign-in isn\'t set up yet', 'You can still vote without Discord.', back, 'Back to the ballot');
+  try {
+    const tok = JSON.parse(UrlFetchApp.fetch('https://discord.com/api/oauth2/token', {method: 'post', muteHttpExceptions: true,
+      payload: {client_id: clientId, client_secret: secret, grant_type: 'authorization_code', code: p.code, redirect_uri: st.u}}).getContentText());
+    if (!tok.access_token) throw new Error(tok.error_description || tok.error || 'no token');
+    const auth = {headers: {Authorization: 'Bearer ' + tok.access_token}, muteHttpExceptions: true};
+    const user = JSON.parse(UrlFetchApp.fetch('https://discord.com/api/users/@me', auth).getContentText());
+    if (!user.id) throw new Error('no user');
+    let name = user.global_name || user.username;
+    let avatar = user.avatar ? 'https://cdn.discordapp.com/avatars/' + user.id + '/' + user.avatar + '.png?size=256' : '';
+    if (guild) {
+      const res = UrlFetchApp.fetch('https://discord.com/api/users/@me/guilds/' + guild + '/member', auth);
+      if (res.getResponseCode() !== 200) {
+        return discordPage('Not in the Anime X Angas server', 'This Discord account isn\'t a member of the server. You can still vote without Discord.', back, 'Back to the ballot');
+      }
+      const m = JSON.parse(res.getContentText());
+      if (m.nick) name = m.nick;
+      if (m.avatar) avatar = 'https://cdn.discordapp.com/guilds/' + guild + '/users/' + user.id + '/avatars/' + m.avatar + '.png?size=256';
+    }
+    if (!avatar) avatar = 'https://cdn.discordapp.com/embed/avatars/' + (Number(String(user.id).slice(-4)) % 6) + '.png';
+    const pass = signPass({h: scrambledId(user.id), n: String(name).slice(0, 40), a: avatar, x: Date.now() + 12 * 3600 * 1000});
+    return discordPage('Signed in as ' + name, 'Taking you back to the ballot…', back + '#dc=' + pass + '&n=' + encodeURIComponent(st.n || ''), 'Continue to the ballot');
+  } catch (err) {
+    console.error(err);
+    return discordPage('Discord sign-in didn\'t work', 'You can still vote without Discord, or try again in a moment.', back, 'Back to the ballot');
+  }
 }
