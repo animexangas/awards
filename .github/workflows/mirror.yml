@@ -1,0 +1,34 @@
+name: Copy the site from benburnsred/awards
+
+# Runs only in a copy (fork) of this repository, such as animexangas/awards.
+# Every 15 minutes it pulls the latest site from benburnsred/awards and, if anything changed, republishes it.
+# Note: if the original changes a file in .github/workflows, this copy can't update itself;
+# then open the copy on GitHub and click "Sync fork" once.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  copy:
+    if: github.repository != 'benburnsred/awards'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull the latest site and republish if it changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          before=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          gh repo sync "$GITHUB_REPOSITORY" --source benburnsred/awards --branch main --force
+          after=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$before" != "$after" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main
+            echo "Republished ($after)"
+          else
+            echo "No changes"
+          fi
