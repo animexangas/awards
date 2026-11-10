@@ -234,7 +234,7 @@ The Settings tab shows which fields are still unmapped. New ballots are written 
 ## Hosting
 
 - **Now (testing and development):** the Google Sheet and Apps Script run on the repo owner's personal Google account.
-  - Sheet: https://docs.google.com/spreadsheets/d/1cuj9sGnpjmltqg7PG16baC7fxtFll_TSfaAcSiDdsv4/edit
+  - Sheet: the private "AxA Awards 2026" Google Sheet in the owner's Drive (its link isn't published here; ask the owner or an admin).
   - Committee page: https://benburnsred.github.io/awards/committee/
   - Admin dashboard: https://benburnsred.github.io/awards/admin/
   - Both short links forward to the committee deployment. Its full URL is `COMMITTEE_APP` in [`committee/index.html`](committee/index.html) and [`admin/index.html`](admin/index.html).

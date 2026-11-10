@@ -251,6 +251,15 @@ function doGet(e) {
   return json({ok: true});
 }
 
+// Flood limit for the public ballot: at most `max` requests of one kind per minute across the whole site.
+// Real voters never come close; a script hammering the ballot gets "Busy" instead of filling the Votes sheet.
+function overLimit(kind, max) {
+  const cache = CacheService.getScriptCache(), key = 'rate:' + kind + ':' + Math.floor(Date.now() / 60000);
+  const n = Number(cache.get(key) || 0) + 1;
+  cache.put(key, String(n), 120);
+  return n > max;
+}
+
 function doPost(e) {
   let body;
   try {
@@ -260,6 +269,7 @@ function doPost(e) {
   }
   // The ballot asks this before voting starts, so a voter learns their name is taken before filling anything in.
   if (body && body.action === 'checkName') {
+    if (overLimit('check', 120)) return json({ok: false, error: 'Busy — please try again'});
     const voter = cleanVoter(body.voter);
     if (!voter) return json({ok: false, error: 'Please enter your name'});
     try {
@@ -272,6 +282,7 @@ function doPost(e) {
   // 'vote' was the old one-category-at-a-time ballot; a page still open from before is asked to reload.
   if (body && body.action === 'vote') return json({ok: false, error: 'This ballot page is out of date. Please reload it.'});
   if (!body || body.action !== 'ballot') return json({ok: false, error: 'Invalid request'});
+  if (overLimit('ballot', 30)) return json({ok: false, error: 'Busy — please try again'});
   try {
     return json(withLock(() => recordBallot(body)));
   } catch (err) {
@@ -956,7 +967,7 @@ function adminRemoveBallot(key) {
 
 /* ===== Optional "Sign in with Discord" =====
  * Setup: create an application at discord.com/developers, add the PUBLIC web app's /exec address as an OAuth2
- * redirect, put its Client ID (and optionally the AxA server ID) in Settings, and its Client Secret in
+ * redirect, put its Client ID in Settings, and its Client Secret in
  * Project Settings → Script properties as DISCORD_CLIENT_SECRET. Voters who sign in get a signed pass; their ballot
  * then records a scrambled form of their Discord ID (never the ID itself), so one account can be spotted voting
  * under two names. Signing in is optional; voting without Discord works as before. */
@@ -992,7 +1003,7 @@ function scrambledId(id) {
 // Only send voters back to our own ballot pages.
 function safeReturn(url) {
   url = String(url || '');
-  const ok = /^https:\/\/(benburnsred|animexangas)\.github\.io\/awards\/vote\//.test(url) || /^http:\/\/localhost(:\d+)?\//.test(url);
+  const ok = /^https:\/\/(benburnsred|animexangas)\.github\.io\/awards\/vote\//.test(url);
   return ok ? url.split('#')[0] : '';
 }
 
@@ -1015,7 +1026,7 @@ function discordCallback(p) {
   } catch (err) {}
   const back = safeReturn(st.r);
   if (!back) return discordPage('Sign-in link not recognised', 'Please go back to the ballot and try again.');
-  const s = settingsMap(), clientId = String(s.discord_client_id || '').trim(), guild = String(s.discord_guild_id || '').trim();
+  const s = settingsMap(), clientId = String(s.discord_client_id || '').trim();
   const secret = PropertiesService.getScriptProperties().getProperty('DISCORD_CLIENT_SECRET');
   if (p.error || !p.code) return discordPage('Discord sign-in cancelled', 'No problem: you can still vote without Discord.', back, 'Back to the ballot');
   if (!clientId || !secret) return discordPage('Discord sign-in isn\'t set up yet', 'You can still vote without Discord.', back, 'Back to the ballot');
@@ -1026,17 +1037,8 @@ function discordCallback(p) {
     const auth = {headers: {Authorization: 'Bearer ' + tok.access_token}, muteHttpExceptions: true};
     const user = JSON.parse(UrlFetchApp.fetch('https://discord.com/api/users/@me', auth).getContentText());
     if (!user.id) throw new Error('no user');
-    let name = user.global_name || user.username;
+    const name = user.global_name || user.username;   // only the basic profile is asked for: no server or member info
     let avatar = user.avatar ? 'https://cdn.discordapp.com/avatars/' + user.id + '/' + user.avatar + '.png?size=256' : '';
-    if (guild) {
-      const res = UrlFetchApp.fetch('https://discord.com/api/users/@me/guilds/' + guild + '/member', auth);
-      if (res.getResponseCode() !== 200) {
-        return discordPage('Not in the Anime X Angas server', 'This Discord account isn\'t a member of the server. You can still vote without Discord.', back, 'Back to the ballot');
-      }
-      const m = JSON.parse(res.getContentText());
-      if (m.nick) name = m.nick;
-      if (m.avatar) avatar = 'https://cdn.discordapp.com/guilds/' + guild + '/users/' + user.id + '/avatars/' + m.avatar + '.png?size=256';
-    }
     if (!avatar) avatar = 'https://cdn.discordapp.com/embed/avatars/' + (Number(String(user.id).slice(-4)) % 6) + '.png';
     const pass = signPass({h: scrambledId(user.id), n: String(name).slice(0, 40), a: avatar, x: Date.now() + 12 * 3600 * 1000});
     return discordPage('Signed in as ' + name, 'Taking you back to the ballot…', back + '#dc=' + pass + '&n=' + encodeURIComponent(st.n || ''), 'Continue to the ballot');

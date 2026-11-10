@@ -250,8 +250,7 @@ const SETTING_GROUPS = [
     ['voting_closes', 'Voting ends (optional)', 'datetime-local'], ['reveal_winners', 'Reveal winners on the site', 'bool'],
     ['show_results', 'Show points on the site', 'bool']]],
   ['Social links', '', [['facebook_url', 'Facebook link', 'text'], ['youtube_url', 'YouTube link', 'text'], ['discord_url', 'Discord link', 'text']]],
-  ['Discord sign-in (optional)', '', [['discord_client_id', 'Discord application Client ID (blank = no Discord button)', 'text'],
-    ['discord_guild_id', 'AxA server ID (blank = any Discord account)', 'text']]],
+  ['Discord sign-in (optional)', '', [['discord_client_id', 'Discord application Client ID (blank = no Discord button)', 'text']]],
   ['Votes data', 'voting', [['votes_sheet_id', 'Votes spreadsheet ID (blank = this sheet)', 'text'], ['votes_tab', 'Votes tab name', 'text']]]];
 function settingField([k, label, type]){
   const s = STATE.settings;

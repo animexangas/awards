@@ -866,11 +866,11 @@ function renderDc(){
 document.addEventListener('click', e => {
   if (e.target.closest('#dcOut')){ dcStore.set('aw.dc', null); renderDc(); return; }
   if (!e.target.closest('#dcIn')) return;
-  const id = String(SETTINGS.discord_client_id || '').trim(), guild = String(SETTINGS.discord_guild_id || '').trim();
+  const id = String(SETTINGS.discord_client_id || '').trim();
   const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
   dcStore.set('aw.dcnonce', nonce);
   const q = new URLSearchParams({client_id: id, response_type: 'code', redirect_uri: APPS_SCRIPT_URL, prompt: 'none',
-    scope: guild ? 'identify guilds.members.read' : 'identify', state: b64u(JSON.stringify({r: location.href.split('#')[0], u: APPS_SCRIPT_URL, n: nonce}))});
+    scope: 'identify', state: b64u(JSON.stringify({r: location.href.split('#')[0], u: APPS_SCRIPT_URL, n: nonce}))});
   location.href = 'https://discord.com/oauth2/authorize?' + q;
 });
 
