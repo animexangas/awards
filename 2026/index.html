@@ -584,6 +584,18 @@ html{scroll-padding-top:128px!important}
 .top.solid::after,.catnav::after{background:linear-gradient(#030806,rgba(3,8,6,.6) 40%,rgba(3,8,6,0))!important}
 .charge{top:63px!important;z-index:42}
 </style>
+<style>
+/* Each award heading is a fixed-size block around its rune ring, so the ring never reaches the cards
+   and every award has the same gap above its cards, whether the title takes one line or two. */
+:root{--ringW:clamp(240px,30vw,300px)}
+.cat-head{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:var(--ringW);margin-bottom:40px!important}
+.cat-head>*{max-width:100%}
+.cat-head .cat-kicker{flex:none}
+.cat-head h2{margin:12px 0 8px!important}
+.cat-head .cat-state{margin-top:12px}
+.cat-head::before{top:50%!important;width:var(--ringW)!important}
+@media (max-width:600px){:root{--ringW:240px}.cat-head{margin-bottom:28px!important}}
+</style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
