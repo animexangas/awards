@@ -8,6 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <title>Anime X Angas Awards — Ballot</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/favicon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
 <style>
 :root{
   --bg:#06060b;--bg2:#0b0b14;--panel:rgba(255,255,255,.035);--panel2:rgba(255,255,255,.06);--ink:#f5f1e8;--muted:#9a95a8;--dim:#6b6779;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
@@ -285,6 +288,12 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
 /* Readable text over the ballot's rune ring: a solid mode badge and a soft dark halo around the text */
 .mode{background:#030806!important;position:relative;z-index:1;box-shadow:0 0 18px 6px rgba(3,8,6,.85)}
 .hero p,.eyebrow{text-shadow:0 0 3px #030806,0 0 7px #030806,0 0 12px rgba(3,8,6,.95),0 0 20px rgba(3,8,6,.8)}
+</style>
+<style>
+/* Site name in the top bar: bold and solid so it reads at small sizes */
+.brand{font-family:"Orbitron",var(--sans)!important;font-weight:700!important;font-size:13px!important;letter-spacing:.14em!important}
+.brand span{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#e4ece8!important;-webkit-text-fill-color:#e4ece8;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+@media (max-width:600px){.brand{font-size:11px!important;letter-spacing:.08em!important}}
 </style>
 </head>
 <body>

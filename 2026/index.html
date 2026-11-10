@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#030806">
-<title>Anime X Angas Awards</title>
-<meta name="description" content="The community anime awards — categories, nominees and winners.">
+<title>Anime X Angas Awards 2026</title>
+<link rel="icon" type="image/png" sizes="32x32" href="../img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="../img/favicon-192.png">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<meta property="og:title" content="Anime X Angas Awards 2026">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -643,6 +646,20 @@ html:not(.page-ready) body{overflow:hidden}
 /* Award headings: just the title and status inside the ring (no "Award" label, no description line) */
 .cat .cat-head .cat-kicker,.cat .cat-head .cat-desc{display:none!important}
 </style>
+<style>
+/* "Voting has ended" line in the header */
+.vstatus{margin-top:26px;font:400 clamp(11px,1.3vw,14px)/1.4 var(--wide,"Michroma",sans-serif);letter-spacing:.42em;padding-left:.42em;text-transform:uppercase;
+  color:#e9c46a;text-align:center;text-shadow:0 0 3px #030806,0 0 10px rgba(3,8,6,.9),0 0 18px rgba(233,196,106,.25)}
+.vstatus::before,.vstatus::after{content:"";display:inline-block;vertical-align:middle;width:28px;height:1px;margin:0 14px;background:linear-gradient(90deg,transparent,#c99a3c)}
+.vstatus::after{background:linear-gradient(90deg,#c99a3c,transparent)}
+@media (max-width:600px){.vstatus{letter-spacing:.28em;padding-left:.28em}.vstatus::before,.vstatus::after{width:16px;margin:0 8px}}
+</style>
+<style>
+/* Site name in the top bar: bold and solid so it reads at small sizes */
+.brand{font-family:"Orbitron",var(--sans)!important;font-weight:700!important;font-size:13px!important;letter-spacing:.14em!important}
+.brand span{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#e4ece8!important;-webkit-text-fill-color:#e4ece8;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+@media (max-width:600px){.brand{font-size:11px!important;letter-spacing:.08em!important}}
+</style>
 </head>
 <body>
 <div id="portal" role="status" aria-label="Loading the awards"><div class="bg"></div><canvas aria-hidden="true"></canvas><div class="lbl"></div></div>
@@ -794,6 +811,7 @@ html:not(.page-ready) body{overflow:hidden}
     <div class="rule"></div>
     <p class="tagline" id="tagline"></p>
     <div class="when" id="when"></div>
+    <div class="vstatus" id="vstatus" hidden>Voting has ended</div>
     <div class="count" id="count" hidden></div>
     <div class="ctas">
       <a class="btn gold" id="heroVote" href="../vote/" hidden>Cast your vote</a>
@@ -936,7 +954,7 @@ function stageHTML(c, showRes){
 }
 
 function render(){
-  const reveal = yes(S.reveal_winners), showRes = yes(S.show_results), voteOpen = yes(S.vote_open);
+  const reveal = yes(S.reveal_winners), showRes = yes(S.show_results), voteOpen = yes(S.vote_open) && !votingEnded();
   document.title = S.title;
   $('#footTitle').textContent = S.title;
   $('#brandName').textContent = S.title.replace(/\s+\d{4}$/, '');
@@ -997,7 +1015,29 @@ function render(){
   observe();
 }
 
+// Voting has ended once the voting_closes time has passed (the ballot closes at the same moment).
+function votingEnded(){ const c = S.voting_closes ? new Date(S.voting_closes) : null; return !!(c && !isNaN(c) && Date.now() > c); }
+// Vote buttons and the "Voting has ended" line follow the deadline, even if the page is left open past it.
+function voteState(){
+  const ended = votingEnded(), open = yes(S.vote_open) && !ended;
+  ['#topVote', '#heroVote', '#footVote'].forEach(id => { const e = $(id); if (e && e.hidden === open) e.hidden = !open; });
+  const v = $('#vstatus'); if (!v) return;
+  // While voting is open (and a deadline is set): "Voting closes in …". After the deadline: "Voting has ended".
+  const closes = S.voting_closes ? new Date(S.voting_closes) : null, opens = S.voting_opens ? new Date(S.voting_opens) : null;
+  // Voting has only really started once it's past the start date (if set) and some category has published nominees.
+  const started = !(opens && !isNaN(opens) && Date.now() < opens) && CATS.some(c => !c.special && c.noms.length);
+  const live = started && open && closes && !isNaN(closes);
+  let text = '';
+  if (started && ended && !yes(S.reveal_winners)) text = 'Voting has ended';
+  else if (live){
+    const m = Math.max(1, Math.ceil((closes - Date.now()) / 6e4)), d = Math.floor(m / 1440), h = Math.floor(m % 1440 / 60);
+    text = 'Voting closes in ' + (d >= 2 ? d + ' days' : d === 1 ? '1 day' + (h ? ' ' + h + 'h' : '') : h ? h + 'h ' + (m % 60) + 'm' : m + ' min');
+  }
+  if (v.textContent !== text) v.textContent = text;   // only touch the page when the wording changes
+  if (v.hidden === !!text) v.hidden = !text;
+}
 function tick(){
+  voteState();
   const d = S.date ? new Date(S.date) : null, el = $('#count');
   const ms = d && !isNaN(d) ? d - Date.now() : -1;
   if (ms <= 0){ el.hidden = true; return; }
@@ -1113,6 +1153,7 @@ async function load(){
     // Special awards (e.g. Flavour of AxA) stay hidden until their winner is revealed.
     CATS = build(rows).filter(c => !c.special || (yes(S.reveal_winners) && c.noms.some(n => n.winner)));
     render();
+    voteState();
     tick();   // show the countdown straight away, so the header layout is final at once
     loadCovers();
   } catch (e){
@@ -1276,10 +1317,10 @@ if (REFRESH_SECONDS) setInterval(load, REFRESH_SECONDS * 1000);
   const addMargin = (e, prop, px) => e.style.setProperty(prop, (parseFloat(getComputedStyle(e)[prop === 'margin-top' ? 'marginTop' : 'paddingTop']) + px) + 'px', 'important');
   // Where the content sits now: centre (page coordinates) and the ring size it needs.
   function measure(phone){
-    const parts = [...col.querySelectorAll(phone ? '#t1,#t2,#t3' : '#t1,#t2,#t3,.count>div,.ctas .btn')].filter(e => e.offsetParent && e.getBoundingClientRect().width);
+    const parts = [...col.querySelectorAll(phone ? '#t1,#t2,#t3' : '#t1,#t2,#t3,#vstatus,.count>div,.ctas .btn')].filter(e => e.offsetParent && e.getBoundingClientRect().width);
     if (!parts.length) return null;
     const c = col.getBoundingClientRect();
-    const boxes = parts.map(e => /^t\d$/.test(e.id) ? letters(e) : e.getBoundingClientRect());
+    const boxes = parts.map(e => /^(t\d|vstatus)$/.test(e.id) ? letters(e) : e.getBoundingClientRect());
     const top = Math.min(...boxes.map(b => b.top)), bottom = Math.max(...boxes.map(b => b.bottom));
     const cx = c.left + c.width / 2, cy = (top + bottom) / 2;
     let far = 0;
@@ -1317,7 +1358,7 @@ if (REFRESH_SECONDS) setInterval(load, REFRESH_SECONDS * 1000);
       // in the screen you see on first load, below the top bar. If it's taller than the screen, start it just under the bar.
       const top = m.cy - m.D * RUNE_EDGE;
       let bottom = m.cy + m.D * RUNE_EDGE;
-      for (const e of col.querySelectorAll('.count>div,.ctas .btn')) if (e.offsetParent){ const r = e.getBoundingClientRect(); bottom = Math.max(bottom, r.bottom + scrollY); }
+      for (const e of col.querySelectorAll('#vstatus,.count>div,.ctas .btn')) if (e.offsetParent){ const r = e.getBoundingClientRect(); bottom = Math.max(bottom, r.bottom + scrollY); }
       const space = innerHeight - barBottom, h = bottom - top;
       // Phones: if the block doesn't fit the first screen, shrink the header content a little so it does.
       if (phone && !zoomed && h + 24 > space){
@@ -1328,7 +1369,7 @@ if (REFRESH_SECONDS) setInterval(load, REFRESH_SECONDS * 1000);
       const want = h + 24 <= space ? barBottom + (space - h) / 2 : barBottom + 12;
       const shift = Math.round(want - top);
       if (Math.abs(shift) > 1){ addMargin(col, 'margin-top', shift); moved = true; }
-      const next = phone && [count, ctas].find(e => e && e.offsetParent && !e.hidden);
+      const next = phone && [col.querySelector('#vstatus'), count, ctas].find(e => e && e.offsetParent && !e.hidden);
       if (next){
         const need = Math.ceil(m.cy + m.D * RUNE_EDGE + 14 - (next.getBoundingClientRect().top + scrollY));   // phones: next block starts below the ring
         if (need > 1){ addMargin(next, 'margin-top', need); moved = true; }
