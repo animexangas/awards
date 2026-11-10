@@ -891,6 +891,22 @@ function dcInfo(){
   dcStore.set('aw.dcnonce', null);
   history.replaceState(null, '', location.pathname + location.search);
 })();
+// Coming back from Discord with ?code=…&state=…: finish the sign-in in the background (no Google page in between).
+const DC_REDIRECT = location.origin + location.pathname;
+(function(){
+  const q = new URLSearchParams(location.search);
+  if (!q.get('state') || !(q.get('code') || q.get('error'))) return;
+  let st = {}; try { st = JSON.parse(unb64u(q.get('state'))); } catch (e){}
+  const code = q.get('code'), ok = code && st.n && st.n === dcStore.get('aw.dcnonce');
+  dcStore.set('aw.dcnonce', null);
+  history.replaceState(null, '', location.pathname);
+  if (!ok) return;
+  api({action: 'discord', code, redirect: DC_REDIRECT}).then(r => {
+    if (r && r.ok && r.pass){ dcStore.set('aw.dc', r.pass); toast('Signed in with Discord'); }
+    else toast((r && r.error) || 'Discord sign-in didn’t work. You can still vote without Discord.');
+    if (!$('#nameView').hidden) renderDc();
+  }).catch(() => toast('Discord sign-in didn’t work. You can still vote without Discord.'));
+})();
 function renderDc(){
   const box = $('#dcBox'), id = String(SETTINGS.discord_client_id || '').trim();
   const info = dcInfo();
@@ -913,8 +929,8 @@ document.addEventListener('click', e => {
   const id = String(SETTINGS.discord_client_id || '').trim();
   const nonce = Math.random().toString(36).slice(2) + Date.now().toString(36);
   dcStore.set('aw.dcnonce', nonce);
-  const q = new URLSearchParams({client_id: id, response_type: 'code', redirect_uri: APPS_SCRIPT_URL, prompt: 'none',
-    scope: 'identify', state: b64u(JSON.stringify({r: location.href.split('#')[0], u: APPS_SCRIPT_URL, n: nonce}))});
+  const q = new URLSearchParams({client_id: id, response_type: 'code', redirect_uri: DC_REDIRECT, prompt: 'none',
+    scope: 'identify', state: b64u(JSON.stringify({n: nonce}))});
   location.href = 'https://discord.com/oauth2/authorize?' + q;
 });
 
