@@ -384,6 +384,26 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
 .dc-av{width:28px;height:28px;border-radius:50%;vertical-align:middle;margin-right:8px;box-shadow:0 0 0 2px #e9c46a}
 .dc span{color:#c9d3cf;font-size:13px}
 </style>
+<style>
+/* "Is it safe?" help button and pop-up for Discord sign-in */
+.dc-help{display:inline-grid;place-items:center;width:18px;height:18px;margin-left:4px;padding:0;border-radius:50%;border:1px solid #c99a3c;background:transparent;
+  color:#e9c46a;font:700 11px/1 var(--sans);cursor:pointer;vertical-align:middle}
+.dc-help:hover{background:rgba(233,196,106,.12)}
+.dc-safe{max-width:min(520px,92vw);padding:0;border:1px solid #c99a3c;background:linear-gradient(180deg,#0c1814,#050b08);color:var(--ink);
+  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 50px -10px rgba(62,224,138,.35),0 30px 80px -20px rgba(0,0,0,.9)}
+.dc-safe::backdrop{background:rgba(1,5,3,.75)}
+.dc-safe-in{padding:22px 22px 18px;text-align:left}
+.dc-safe h3{margin:0 0 6px;font:800 18px/1.2 var(--tech);letter-spacing:.04em;color:#f6e3ad}
+.dc-safe .lead{margin:0 0 12px;color:#c9d3cf;font-size:14px}
+.dc-safe h4{margin:14px 0 6px;font:700 12px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:#e9c46a}
+.dc-safe ul{margin:0;padding-left:18px;color:#c9d3cf;font-size:13.5px;line-height:1.5}
+.dc-safe li{margin:3px 0}
+.dc-safe p{color:#c9d3cf;font-size:13.5px;line-height:1.5;margin:0}
+.dc-safe b{color:#fff}
+.dc-safe-btns{display:flex;justify-content:flex-end;margin-top:16px}
+/* The name box never spills out of its panel on narrow phones */
+.voter label{min-width:0}.voter input{width:100%;min-width:0;box-sizing:border-box}
+</style>
 </head>
 <body>
 <div class="wrap">
@@ -406,6 +426,28 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
       <h2>Before you vote</h2>
       <p>Enter your name. It's used for every category, and each name can vote only once. You'll vote in every category, then submit them all together.</p>
       <div class="dc" id="dcBox" hidden></div>
+      <dialog class="dc-safe" id="dcSafe" aria-labelledby="dcSafeTitle">
+        <div class="dc-safe-in">
+          <h3 id="dcSafeTitle">Is Discord sign-in safe?</h3>
+          <p class="lead">Yes. Signing in is optional; you can always vote with just a name.</p>
+          <h4>🔒 What we do</h4>
+          <ul>
+            <li>You sign in on the real <b>discord.com</b>. This site never sees your password.</li>
+            <li>We only receive your <b>username and profile picture</b>. Discord shows you this before you click <b>Authorize</b>.</li>
+            <li>We <b>can't</b> read your messages, see your servers or friends, get your email, or post as you.</li>
+            <li>Your ballot stores a scrambled code instead of your Discord ID, so your votes stay private.</li>
+            <li>You can still change the name shown on your ballot before voting.</li>
+          </ul>
+          <h4>🛡️ Stay safe from fakes</h4>
+          <ul>
+            <li>Only sign in when the address bar says <b>discord.com</b>.</li>
+            <li>Admins will <b>never</b> DM you asking you to log in, or for codes or passwords. If someone does, report it.</li>
+          </ul>
+          <h4>🔌 Remove access later</h4>
+          <p>Discord → <b>User Settings</b> → <b>Authorized Apps</b> → <b>Anime X Angas Awards</b> → <b>Deauthorize</b>.</p>
+          <div class="dc-safe-btns"><button class="btn primary" id="dcSafeClose">Got it</button></div>
+        </div>
+      </dialog>
       <div class="voter">
         <label>Your name<input id="voterName" placeholder="e.g. Ben" maxlength="40" autocomplete="nickname"></label>
         <label id="codeField">Voter code<input id="voterCode" placeholder="e.g. AWD-7Q2K" maxlength="20" autocomplete="off"></label>
@@ -860,10 +902,12 @@ function renderDc(){
     if (!$('#voterName').value.trim()) $('#voterName').value = info.n;
   } else {
     box.innerHTML = `<button class="btn dc-btn" id="dcIn"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.4 3l-.6 1.3a18.4 18.4 0 0 0-5.6 0L8.6 3a19.7 19.7 0 0 0-4.9 1.4C.6 9 -.3 13.6.1 18.1a19.9 19.9 0 0 0 6 3l1.3-2.1a12.9 12.9 0 0 1-2-1l.5-.4a14.2 14.2 0 0 0 12.2 0l.5.4c-.6.4-1.3.7-2 1l1.3 2.1a19.8 19.8 0 0 0 6-3c.5-5.2-.8-9.8-3.6-13.7ZM8.3 15.3c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Zm7.4 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4Z"/></svg>Sign in with Discord</button>
-      <span class="note">Optional. Shows your Discord picture; you can still change your name.</span>`;
+      <span class="note">Optional. Shows your Discord picture; you can still change your name. <button class="dc-help" id="dcHelp" aria-label="Is Discord sign-in safe?" title="Is it safe?">?</button></span>`;
   }
 }
 document.addEventListener('click', e => {
+  if (e.target.closest('#dcHelp')){ $('#dcSafe').showModal(); return; }
+  if (e.target.closest('#dcSafeClose') || e.target.id === 'dcSafe'){ $('#dcSafe').close(); return; }
   if (e.target.closest('#dcOut')){ dcStore.set('aw.dc', null); renderDc(); return; }
   if (!e.target.closest('#dcIn')) return;
   const id = String(SETTINGS.discord_client_id || '').trim();
