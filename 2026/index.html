@@ -930,7 +930,8 @@ async function load(){
     lastKey = key;
     S = {...DEFAULTS};
     settings.forEach(r => { if (r.key) S[r.key.trim().toLowerCase()] = r.value; });
-    CATS = build(rows);
+    // Special awards (e.g. Flavour of AxA) stay hidden until their winner is revealed.
+    CATS = build(rows).filter(c => !c.special || (yes(S.reveal_winners) && c.noms.some(n => n.winner)));
     render();
     loadCovers();
   } catch (e){
