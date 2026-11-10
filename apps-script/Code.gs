@@ -279,6 +279,17 @@ function doPost(e) {
       return json({ok: false, error: 'Something went wrong — please try again'});
     }
   }
+  // Discord sign-in, finished in the background: the ballot page sends the code Discord gave it and gets a pass back,
+  // so voters never land on an Apps Script page (which shows Google's "created by a Google Apps Script user" bar).
+  if (body && body.action === 'discord') {
+    if (overLimit('discord', 60)) return json({ok: false, error: 'Busy — please try again'});
+    try {
+      return json(discordExchange(String(body.code || ''), String(body.redirect || '')));
+    } catch (err) {
+      console.error(err);
+      return json({ok: false, error: 'Discord sign-in didn’t work. You can still vote without Discord.'});
+    }
+  }
   // 'vote' was the old one-category-at-a-time ballot; a page still open from before is asked to reload.
   if (body && body.action === 'vote') return json({ok: false, error: 'This ballot page is out of date. Please reload it.'});
   if (!body || body.action !== 'ballot') return json({ok: false, error: 'Invalid request'});
@@ -1004,7 +1015,7 @@ function scrambledId(id) {
 function safeReturn(url) {
   url = String(url || '');
   const ok = /^https:\/\/(benburnsred|animexangas)\.github\.io\/awards\/vote\//.test(url);
-  return ok ? url.split('#')[0] : '';
+  return ok ? url.split('#')[0].split('?')[0] : '';
 }
 
 function discordPage(title, text, link, linkText) {
@@ -1017,7 +1028,26 @@ function discordPage(title, text, link, linkText) {
   return t.evaluate().setTitle('Anime X Angas Awards').addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-// Discord sends the voter back here with ?code=…&state=… (state carries the ballot address and a one-time nonce).
+// Swaps the one-time code from Discord for the voter's username and picture, and returns a signed pass.
+// redirect must be one of our ballot pages and match the address the sign-in started from.
+function discordExchange(code, redirect) {
+  if (!code || !safeReturn(redirect)) return {ok: false, error: 'Sign-in link not recognised. Please try again.'};
+  const clientId = String(settingsMap().discord_client_id || '').trim();
+  const secret = PropertiesService.getScriptProperties().getProperty('DISCORD_CLIENT_SECRET');
+  if (!clientId || !secret) return {ok: false, error: 'Discord sign-in isn’t set up yet. You can still vote without Discord.'};
+  const tok = JSON.parse(UrlFetchApp.fetch('https://discord.com/api/oauth2/token', {method: 'post', muteHttpExceptions: true,
+    payload: {client_id: clientId, client_secret: secret, grant_type: 'authorization_code', code: code, redirect_uri: redirect}}).getContentText());
+  if (!tok.access_token) throw new Error(tok.error_description || tok.error || 'no token');
+  const user = JSON.parse(UrlFetchApp.fetch('https://discord.com/api/users/@me',
+    {headers: {Authorization: 'Bearer ' + tok.access_token}, muteHttpExceptions: true}).getContentText());
+  if (!user.id) throw new Error('no user');
+  const name = user.global_name || user.username;   // only the basic profile is asked for: no server or member info
+  const avatar = user.avatar ? 'https://cdn.discordapp.com/avatars/' + user.id + '/' + user.avatar + '.png?size=256'
+    : 'https://cdn.discordapp.com/embed/avatars/' + (Number(String(user.id).slice(-4)) % 6) + '.png';
+  return {ok: true, pass: signPass({h: scrambledId(user.id), n: String(name).slice(0, 40), a: avatar, x: Date.now() + 12 * 3600 * 1000})};
+}
+
+// Older sign-in route: Discord sends the voter back here with ?code=…&state=… (state carries the ballot address and a one-time nonce).
 function discordCallback(p) {
   let st = {};
   try {
