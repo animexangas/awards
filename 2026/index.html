@@ -624,8 +624,148 @@ document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.targ
 .cat-state{background:#030806!important;position:relative;z-index:1;box-shadow:0 0 18px 6px rgba(3,8,6,.85)}
 .cat-desc,.cat-kicker{text-shadow:0 0 3px #030806,0 0 7px #030806,0 0 12px rgba(3,8,6,.95),0 0 20px rgba(3,8,6,.8)}
 </style>
+<style>
+/* ===== Loader: a spark portal that grows, then settles onto the header's rune ring ===== */
+#portal{position:fixed;inset:0;z-index:9999;pointer-events:auto}
+#portal .bg{position:absolute;inset:0;background:radial-gradient(60% 50% at 50% 50%,#08130e,#030806 70%);transition:opacity .9s ease}
+#portal canvas{position:absolute;inset:0;width:100%;height:100%;transition:opacity .6s ease}
+#portal .lbl{position:absolute;left:0;right:0;top:calc(50% + 28vmin + 30px);text-align:center;transition:opacity .4s ease;
+  font:400 10px/1 "Michroma",sans-serif;letter-spacing:.5em;padding-left:.5em;text-transform:uppercase;color:#c9a95a;opacity:.8;visibility:hidden}
+#portal .sekai{opacity:0;animation:sekaiIn 1.4s ease .9s forwards;color:#ffcf7a;text-shadow:0 0 12px rgba(255,140,40,.55)}
+@keyframes sekaiIn{to{opacity:1}}
+@keyframes portalBlink{from{opacity:.35}to{opacity:.85}}
+#portal.leaving{pointer-events:none}
+#portal.leaving .bg,#portal.leaving .lbl{opacity:0;animation:none}
+#portal.gone canvas{opacity:0}
+html:not(.page-ready) body{overflow:hidden}
+</style>
+<style>
+/* Award headings: just the title and status inside the ring (no "Award" label, no description line) */
+.cat .cat-head .cat-kicker,.cat .cat-head .cat-desc{display:none!important}
+</style>
 </head>
 <body>
+<div id="portal" role="status" aria-label="Loading the awards"><div class="bg"></div><canvas aria-hidden="true"></canvas><div class="lbl"></div></div>
+<script>
+// Spark portal loader. It opens small and grows; sparks are thrown off the spinning ring, gold when fresh, red as they fade.
+// When the page is ready it glides and resizes onto the header's rune ring while the backdrop dissolves, then fades away.
+(function(){
+  const box = document.getElementById('portal'), cv = box.querySelector('canvas'), x = cv.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The intro always starts at the top of the page (phones otherwise restore the old scroll position on refresh,
+  // which put the header ring off screen and sent the portal flying up). Links to a specific award keep their place.
+  // A reload always starts at the top (and drops any #award from the address); a fresh link to an award keeps its place.
+  const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+  if (nav && nav.type === 'reload' && location.hash) history.replaceState(null, '', location.pathname + location.search);
+  const toTop = () => { if (!location.hash) scrollTo(0, 0); };
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  toTop(); addEventListener('load', toTop); addEventListener('pageshow', toTop);   // browsers may restore the old position late in a reload
+  // One loading line per visit, picked at random. In the "void" line, "sekai" fades in a moment later.
+  const LINES = ['Bridging the realms', 'Opening the portal', 'Crossing over', 'Entering the void… <span class="sekai">sekai</span>'];
+  const label = box.querySelector('.lbl');
+  label.innerHTML = LINES[Math.floor(Math.random() * LINES.length)];
+  let W, H, D = Math.min(devicePixelRatio || 1, 1.5);
+  const size = () => { W = cv.width = Math.round(innerWidth * D); H = cv.height = Math.round(innerHeight * D); };
+  size(); addEventListener('resize', size);
+  const ease = t => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);           // ease-out
+  const easeIO = t => { t = Math.min(1, Math.max(0, t)); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; };
+  const BAR = 64;   // height of the top bar; the header ring is centred in the space below it
+  const ready = () => document.querySelector('.rings-on') && document.querySelector('#categories .cat, #categories .note, #categories .err');
+  // The portal opens only once the header ring's position is final (fonts and Sheet data in, countdown shown,
+  // and the ring holding still), then stays at that spot. Until then the screen stays dark.
+  let spot = null, prevKey = '', steady = 0;
+  const ringBox = () => { const ring = document.querySelector('.hero-ring.rune'), w = ring && parseFloat(ring.style.width);
+    if (!w) return null; const b = ring.getBoundingClientRect(); return {cx: b.left + b.width / 2, cy: b.top + b.height / 2, w}; };
+  function lock(){
+    if (spot) return;
+    const b = ready() ? ringBox() : null;
+    const key = b ? [b.cx, b.cy, b.w].map(Math.round).join() : '';
+    steady = b && key === prevKey ? steady + 1 : 0; prevKey = key;
+    if (b && steady >= 3) spot = {cx: b.cx, cy: b.cy, r: Math.min(b.w * .3, innerWidth * .32)};
+    else if (performance.now() - t0 > 6000) spot = {cx: innerWidth / 2, cy: BAR + (innerHeight - BAR) / 2, r: Math.min(innerWidth, innerHeight - BAR) * .28};
+    else setTimeout(lock, 100);
+  }
+  setTimeout(lock, 50);
+  const home = () => spot && {...spot};
+  // Bright arcs on the ring at uneven spacing, lengths and speeds, so nothing looks grouped.
+  const ARCS = Array.from({length: 7}, () => ({at: Math.random() * 6.28, len: .15 + Math.random() * .6, sp: .6 + Math.random() * .9, o: .35 + Math.random() * .65}));
+  const t0 = performance.now(); let last = t0, spin = 0, on = true, leave = null, sparks = [];
+  // where we are right now (CSS pixels)
+  let opened = 0, labelPlaced = false;
+  function state(now){
+    const h = home(); if (!h) return null;
+    if (!opened) opened = now;
+    const grow = ease((now - opened) / 1300);
+    let cx = h.cx, cy = h.cy, r = 10 + (h.r - 10) * grow, power = .25 + .75 * grow, burst = power;
+    if (leave){
+      const raw = Math.min(1, (now - leave.t) / 1100), k = easeIO(raw);
+      cx += (leave.cx - cx) * k; cy += (leave.cy - cy) * k; r += (leave.r - r) * k;
+      burst = power * (1 + 2.2 * Math.sin(Math.PI * raw)) * (1 - raw * raw);   // a shower of sparks as it expands, dying out at the end
+      power *= 1 - k;
+    }
+    const fling = leave ? Math.min(1, (now - leave.t) / 700) : 0;   // grows as the loader hands over
+    return {cx, cy, r, power, burst, fling, fullR: h.r, homeY: h.cy};
+  }
+  function emit(n, st){
+    for (let i = 0; i < n; i++){
+      const a = Math.random() * Math.PI * 2, rr = st.r + (Math.random() - .5) * st.r * .06, sp = (1.4 + Math.random() * 3.2) * (.5 + st.r / 300);
+      const out = (Math.random() * .8 + st.fling * (.6 + Math.random() * 1.4)) * (st.r / 250);   // scatter grows with the ring's size; a little more while handing over
+      sparks.push({x: st.cx + Math.cos(a) * rr, y: st.cy + Math.sin(a) * rr,
+        vx: -Math.sin(a) * sp + Math.cos(a) * out, vy: Math.cos(a) * sp + Math.sin(a) * out,
+        life: 1, decay: .014 + Math.random() * .026, w: .7 + Math.random() * 1.8, k: Math.random() < .2 ? .35 + Math.random() * 1.3 : 1});   // about 1 in 5 sparks is randomly dimmer or brighter
+    }
+  }
+  function frame(now){
+    if (!on) return;
+    const dt = Math.min(2.5, (now - last) / 16.7); last = now; spin += .025 * dt;
+    const st = state(now);
+    if (!st){ requestAnimationFrame(frame); return; }
+    if (!labelPlaced){ label.style.top = Math.round(st.homeY + st.fullR * 1.16 + 22) + 'px'; label.style.visibility = 'visible'; labelPlaced = true; }   // placed once, under the fully grown portal
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.clearRect(0, 0, W, H);   // a clean slate each frame: no ghost rings left behind
+    x.setTransform(D, 0, 0, D, 0, 0); x.globalCompositeOperation = 'lighter';
+    if (st.power > .02 || st.burst > .02){
+      const g = x.createRadialGradient(st.cx, st.cy, st.r * .82, st.cx, st.cy, st.r * 1.16);
+      g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(.5, `rgba(255,140,40,${.12 * st.power})`); g.addColorStop(1, 'rgba(255,60,20,0)');
+      x.fillStyle = g; x.beginPath(); x.arc(st.cx, st.cy, st.r * 1.16, 0, 6.29); x.fill();
+      if (!still) emit(Math.round(16 * dt * st.burst * Math.max(.4, st.r / 200)), st);
+      x.lineWidth = 2.4; x.strokeStyle = `rgba(255,200,110,${.6 * st.power})`;
+      for (const a of ARCS){ const a0 = spin * a.sp + a.at; x.globalAlpha = a.o; x.beginPath(); x.arc(st.cx, st.cy, st.r, a0, a0 + a.len); x.stroke(); }
+      x.globalAlpha = 1;
+      if (still){ x.lineWidth = 3; x.strokeStyle = `rgba(255,170,80,${.8 * st.power})`; x.beginPath(); x.arc(st.cx, st.cy, st.r, 0, 6.29); x.stroke(); }
+    }
+    x.lineCap = 'round';
+    for (let i = sparks.length - 1; i >= 0; i--){
+      const p = sparks[i], nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
+      x.strokeStyle = `hsla(${18 + p.life * 30},100%,${Math.min(85, (45 + p.life * 25) * (.85 + .15 * p.k))}%,${Math.min(1, p.life * p.k)})`; x.lineWidth = (p.w * p.life + .3) * (.7 + .3 * p.k);
+      x.beginPath(); x.moveTo(p.x - p.vx * 5, p.y - p.vy * 5); x.lineTo(nx, ny); x.stroke();   // a tail behind each spark
+      p.x = nx; p.y = ny; p.vx *= .985; p.vy *= .985; p.vy += .025 * dt; p.life -= p.decay * dt;
+      if (p.life <= 0) sparks.splice(i, 1);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  // Ready = title fonts loaded, the awards drawn from the Sheet, and the header rings in place (at most 8 s, and never before the portal has opened).
+  function done(){
+    if (leave) return;
+    toTop();   // while the portal still covers everything, make sure we're at the top
+    const ring = document.querySelector('.hero-ring.rune'), b = ring && ring.getBoundingClientRect();
+    const w = ring ? parseFloat(ring.style.width) || b.width : 0;
+    const cy = b ? b.top + b.height / 2 : -1;
+    // Land on the ring only if it's on screen; otherwise fade out in place.
+    leave = b && w && cy > 0 && cy < innerHeight ? {t: performance.now(), cx: b.left + b.width / 2, cy, r: w * .485} : {t: performance.now(), ...home()};
+    box.classList.add('leaving');
+    document.documentElement.classList.add('page-ready');
+    setTimeout(() => box.classList.add('gone'), 1050);
+    setTimeout(() => { on = false; box.remove(); }, 1800);
+  }
+  // Add ?portal to the address to keep the loader on screen (for previewing the effect).
+  if (!/[?&]portal(=|&|$)/.test(location.search)) (function wait(){
+    const age = performance.now() - t0;
+    if ((ready() && opened && performance.now() - opened > 1300) || age > 8000) done(); else setTimeout(wait, 120);
+  })();
+})();
+</script>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6ffe4"/><stop offset=".4" stop-color="#87f3aa"/><stop offset=".65" stop-color="#38cd65"/><stop offset="1" stop-color="#1cab45"/></linearGradient>
@@ -973,6 +1113,7 @@ async function load(){
     // Special awards (e.g. Flavour of AxA) stay hidden until their winner is revealed.
     CATS = build(rows).filter(c => !c.special || (yes(S.reveal_winners) && c.noms.some(n => n.winner)));
     render();
+    tick();   // show the countdown straight away, so the header layout is final at once
     loadCovers();
   } catch (e){
     if (!lastKey) $('#categories').innerHTML = `<div class="note err">Couldn't load the awards (${esc(e.message)}).</div>`;
@@ -1172,14 +1313,21 @@ if (REFRESH_SECONDS) setInterval(load, REFRESH_SECONDS * 1000);
           zoomed = true; continue;
         }
       }
-      if (!phone){
-        // Computers: centre the ring in the screen you see on first load (the space below the top bar).
-        const shift = Math.round(barBottom + (innerHeight - barBottom) / 2 - m.cy);
-        if (Math.abs(shift) > 1){ addMargin(col, 'margin-top', shift); moved = true; }
-      } else {
-        const lift = Math.ceil(barBottom + 12 - (m.cy - m.D * RUNE_EDGE));        // phones: rune ring starts below the top bar
-        if (lift > 1){ addMargin(col, 'padding-top', lift); moved = true; }
+      // Balance the whole header block (ring, plus the countdown and buttons when they sit below it on phones)
+      // in the screen you see on first load, below the top bar. If it's taller than the screen, start it just under the bar.
+      const top = m.cy - m.D * RUNE_EDGE;
+      let bottom = m.cy + m.D * RUNE_EDGE;
+      for (const e of col.querySelectorAll('.count>div,.ctas .btn')) if (e.offsetParent){ const r = e.getBoundingClientRect(); bottom = Math.max(bottom, r.bottom + scrollY); }
+      const space = innerHeight - barBottom, h = bottom - top;
+      // Phones: if the block doesn't fit the first screen, shrink the header content a little so it does.
+      if (phone && !zoomed && h + 24 > space){
+        const z = Math.max(.7, (space - 24) / h);
+        for (const e of content) e.style.zoom = z.toFixed(3);
+        zoomed = true; continue;
       }
+      const want = h + 24 <= space ? barBottom + (space - h) / 2 : barBottom + 12;
+      const shift = Math.round(want - top);
+      if (Math.abs(shift) > 1){ addMargin(col, 'margin-top', shift); moved = true; }
       const next = phone && [count, ctas].find(e => e && e.offsetParent && !e.hidden);
       if (next){
         const need = Math.ceil(m.cy + m.D * RUNE_EDGE + 14 - (next.getBoundingClientRect().top + scrollY));   // phones: next block starts below the ring
@@ -1192,8 +1340,12 @@ if (REFRESH_SECONDS) setInterval(load, REFRESH_SECONDS * 1000);
   let shown = false;
   const show = () => { if (!shown){ shown = true; fit(); col.classList.add('rings-on'); } };
   fit();
-  addEventListener('resize', fit);
-  if (window.ResizeObserver) new ResizeObserver(() => fit()).observe(col.querySelector('#title') || col);
+  // While the window is being resized, wait until it stops before refitting: redrawing the glowing rings at every
+  // in-between size is what made resizing stall.
+  let resizeTimer;
+  const later = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(fit, 180); };
+  addEventListener('resize', later);
+  if (window.ResizeObserver) new ResizeObserver(later).observe(col.querySelector('#title') || col);
   // Refit when content appears or hides, but not on the countdown's every-second tick.
   new MutationObserver(m => { if (!busy && m.some(r => !(count && count.contains(r.target) && r.type === 'childList'))) fit(); }).observe(col, {subtree:true, childList:true, attributes:true, attributeFilter:['hidden']});
   (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => setTimeout(show, 350));
