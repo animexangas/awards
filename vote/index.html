@@ -992,13 +992,18 @@ function slideCover(x, name, count, noRing){
     x.fillStyle = 'rgba(233,196,106,.85)'; x.font = `400 26px Michroma, Inter, sans-serif`; x.fillText(spaced('SWIPE FOR MY PICKS'), W / 2, H * .74);
   });
 }
-function slideOutro(x){
-  // Closing slide: just the AxA logo, centred (no slogan or dates).
-  storyBase(x); const W = STORY_W, H = STORY_H;
-  return storyImg(new URL('../img/favicon-192.png', location.href).href).then(im => {
+function slideOutro(x, name){
+  // Closing slide: the voter's Discord picture and name if they signed in with Discord, otherwise the AxA logo.
+  storyBase(x); const W = STORY_W, H = STORY_H, dc = dcInfo();
+  const src = dc && dc.a ? dc.a : new URL('../img/favicon-192.png', location.href).href;
+  return storyImg(src).then(im => im || (dc ? storyImg(new URL('../img/favicon-192.png', location.href).href) : null)).then(im => {
     const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 520); g.addColorStop(0, 'rgba(255,150,50,.18)'); g.addColorStop(.5, 'rgba(62,224,138,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
     if (im){ x.save(); x.beginPath(); x.arc(W / 2, H / 2, 210, 0, 6.29); x.clip(); x.drawImage(im, W / 2 - 210, H / 2 - 210, 420, 420); x.restore();
       x.strokeStyle = '#e9c46a'; x.lineWidth = 7; x.beginPath(); x.arc(W / 2, H / 2, 217, 0, 6.29); x.stroke(); }
+    if (dc){
+      x.textAlign = 'center'; x.fillStyle = '#ffffff'; x.font = `800 60px Inter, sans-serif`;
+      wrapText(x, name, W / 2, H / 2 + 330, W - 200, 70, 2);
+    }
   });
 }
 
@@ -1006,7 +1011,7 @@ async function buildStories(name, mine){
   await (document.fonts ? document.fonts.ready : Promise.resolve());
   STORIES.forEach(s => URL.revokeObjectURL(s.url)); STORIES = [];
   const cv = document.createElement('canvas'); cv.width = STORY_W; cv.height = STORY_H; const x = cv.getContext('2d');
-  const jobs = [['cover', () => slideCover(x, name, mine.length)], ...mine.map(c => [c.id, () => c.method === 'tier' ? slideTier(x, name, c) : slidePick(x, name, c)]), ['ballot', () => slideOutro(x)]];
+  const jobs = [['cover', () => slideCover(x, name, mine.length)], ...mine.map(c => [c.id, () => c.method === 'tier' ? slideTier(x, name, c) : slidePick(x, name, c)]), ['ballot', () => slideOutro(x, name)]];
   const row = $('#storyRow'); row.innerHTML = jobs.map((j, i) => `<div class="story" data-i="${i}"><div class="story-ph">Preparing…</div></div>`).join('');
   $('#storyDots').innerHTML = jobs.map((j, i) => `<button data-i="${i}" aria-label="Slide ${i + 1}"></button>`).join('');
   for (let i = 0; i < jobs.length; i++){
